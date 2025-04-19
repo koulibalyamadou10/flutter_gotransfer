@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:gotransfer/config/app_config.dart';
 import 'package:gotransfer/data/repositories/exchange_reporitory.dart';
+import 'package:gotransfer/presentation/widgets/components/custom_scaffold.dart';
 import 'package:intl/intl.dart';
 import 'package:confetti/confetti.dart';
 import '../../widgets/components/currency_selector.dart';
@@ -157,14 +158,10 @@ class _MoneyTransferPageState extends State<MoneyTransferPage> with SingleTicker
     // Vérifie si le montant est valide
     if (_amountController.text.isEmpty || double.tryParse(_amountController.text) == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Veuillez entrer un montant valide'),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
-        ),
+        CustomScaffold(
+          content: Text('Veuillez entrer un montant valide') ,
+          backgroundColor: Colors.red
+        )
       );
       return;
     }

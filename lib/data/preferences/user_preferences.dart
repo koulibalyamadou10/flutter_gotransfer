@@ -11,6 +11,8 @@ class UserPreferences {
   static const String _keyPhone = 'phone_number';
   static const String _keyAddress = 'address';
   static const String _keyIsLoggedIn = 'is_logged_in';
+  static const String _keyAccessToken = 'access_token';
+  static const String _keyRefreshToken = 'refresh_token';
 
   // Sauvegarder toutes les infos utilisateur
   static Future<bool> saveUser(Map<String, dynamic> userData) async {
@@ -73,6 +75,28 @@ class UserPreferences {
           await prefs.setBool(_keyIsLoggedIn, false);
     } catch (e) {
       debugPrint('Erreur déconnexion: $e');
+      return false;
+    }
+  }
+
+  // Sauvegarde du token
+  static Future<bool> saveAccessToken(String token) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return await prefs.setString(_keyAccessToken, token);
+    } catch (e) {
+      debugPrint('Erreur sauvegarde utilisateur: $e');
+      return false;
+    }
+  }
+
+  // Sauvegarde du refresh token
+  static Future<bool> saveRefreshToken(String refresh) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return await prefs.setString(_keyRefreshToken, refresh);
+    } catch (e) {
+      debugPrint('Erreur sauvegarde utilisateur: $e');
       return false;
     }
   }

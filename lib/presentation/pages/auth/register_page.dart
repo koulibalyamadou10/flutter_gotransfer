@@ -1,12 +1,14 @@
+import 'dart:io';
+
 import 'package:flutter/services.dart';
-import 'package:gotransfer/data/repositories/user_repository.dart';
-import 'package:gotransfer/exceptions/http_exception.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:gotransfer/routes/app_routes.dart';
 import 'package:flutter/material.dart';
-
+import 'package:intl_phone_field/intl_phone_field.dart';
 import '../../../data/models/user_model.dart';
 import '../../../data/preferences/user_preferences.dart';
-import '../../../exceptions/badrequest_exception.dart';
+import '../../../data/repositories/user_repository.dart';
+import '../../widgets/components/custom_scaffold.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -17,7 +19,15 @@ class RegisterPage extends StatefulWidget {
 
 class _RegisterPageState extends State<RegisterPage> {
   bool _isChecked = false;
-  bool _isLoading = false; // Ajout d'un état pour le loader
+  bool _isLoading = false;
+  bool _obscurePassword = true;
+  bool _canResend = false;
+  final FocusNode _focusNode = FocusNode();
+  List<String> code = List.filled(6, ''); // Pour stocker le code
+  List<FocusNode> focus = List.filled(6, FocusNode());
+  int _timeToResendCode = 2;
+  int _countToResendCode = 1;
+  UniqueKey _animationKey = UniqueKey();
 
   // Contrôleurs pour les champs du formulaire
   final TextEditingController _firstNameController = TextEditingController();
@@ -26,7 +36,9 @@ class _RegisterPageState extends State<RegisterPage> {
   final TextEditingController _addressController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  final GlobalKey<FormState> _formKey = GlobalKey<FormState>(); // Clé pour le formulaire
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+  final PageController _controller = PageController();
+  int _currentPage = 0;
 
   late ColorScheme colorScheme;
 
@@ -39,7 +51,7 @@ class _RegisterPageState extends State<RegisterPage> {
     _emailController.text = 'koulibalyamadou11@gmail.com';
     _passwordController.text = '123456789';
     _addressController.text = 'kiroty';
-    _phoneController.text = '+224621820065';
+    _phoneController.text = '621820065';
   }
 
   @override
@@ -50,6 +62,7 @@ class _RegisterPageState extends State<RegisterPage> {
     _emailController.dispose();
     _addressController.dispose();
     _passwordController.dispose();
+    _controller.dispose();
     super.dispose();
   }
 
@@ -57,7 +70,7 @@ class _RegisterPageState extends State<RegisterPage> {
     if (!_formKey.currentState!.validate()) return;
     if (!_isChecked) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Veuillez accepter les conditions générales')),
+        CustomScaffold(content: Text('Veuillez accepter les conditions générales'), backgroundColor: Colors.red)
       );
       return;
     }
@@ -68,51 +81,100 @@ class _RegisterPageState extends State<RegisterPage> {
       // Simulation d'une requête API (remplacez par votre logique réelle)
       await Future.delayed(const Duration(seconds: 2));
 
-      Navigator.pushReplacementNamed(context, AppRoutes.home);
-    //   final user = await UserRepository.createUser(
-    //     User(
-    //       first_name: _firstNameController.text,
-    //       last_name: _lastNameController.text,
-    //       phone_number: _phoneController.text,
-    //       email: _emailController.text,
-    //       password: _passwordController.text,
-    //       address: _addressController.text,
-    //     ),
-    //   );
-    //   if( user == null ) return;
-    //   final saved = await UserPreferences.saveUser(user.toJson());
-    //   if (saved) {
-    //     print('Utilisateur sauvegardé avec succès');
-    //     Navigator.pushReplacementNamed(context, AppRoutes.home);
-    //   } else {
-    //     print('Utilisateur non sauvegardé !');
-    //   }
-    // } on HttpException catch (e) {
-    //   ScaffoldMessenger.of(context).showSnackBar(
-    //     SnackBar(
-    //       content: Text(
-    //         e.toString(),
-    //         style: const TextStyle(color: Colors.white),
-    //       ),
-    //       backgroundColor: Colors.red[800],
-    //       behavior: SnackBarBehavior.floating,
-    //       shape: RoundedRectangleBorder(
-    //         borderRadius: BorderRadius.circular(10),
-    //       ),
-    //       margin: const EdgeInsets.all(10),
-    //       duration: const Duration(seconds: 3),
-    //       action: SnackBarAction(
-    //         label: 'OK',
-    //         textColor: Colors.white,
-    //         onPressed: () {
-    //           ScaffoldMessenger.of(context).hideCurrentSnackBar();
-    //         },
-    //       ),
-    //     ),
-    //   );
+
+      final user = await UserRepository.createUser(
+        User(
+          first_name: _firstNameController.text,
+          last_name: _lastNameController.text,
+          phone_number: _phoneController.text,
+          email: _emailController.text,
+          password: _passwordController.text,
+          address: _addressController.text,
+        ),
+      );
+      if( user == null ) return;
+      final saved = await UserPreferences.saveUser(user.toJson());
+      if (saved) {
+        print('Utilisateur sauvegardé avec succès');
+        _controller.nextPage(duration: Duration(seconds: 1), curve: Curves.easeInOut);
+        //Navigator.pushReplacementNamed(context, AppRoutes.home);
+      } else {
+        print('Utilisateur non sauvegardé !');
+      }
+    } on HttpException catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            e.toString(),
+            style: const TextStyle(color: Colors.white),
+          ),
+          backgroundColor: Colors.red[800],
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+          margin: const EdgeInsets.all(10),
+          duration: const Duration(seconds: 3),
+          action: SnackBarAction(
+            label: 'OK',
+            textColor: Colors.white,
+            onPressed: () {
+              ScaffoldMessenger.of(context).hideCurrentSnackBar();
+            },
+          ),
+        ),
+      );
     }  finally {
       setState(() => _isLoading = false);
     }
+  }
+
+  void _nextPage() {
+    if (_currentPage < 1) {
+      _currentPage++;
+      _controller.animateToPage(
+        _currentPage,
+        duration: Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+    }
+  }
+
+  void _previousPage() {
+    if (_currentPage > 0) {
+      _currentPage--;
+      _controller.animateToPage(
+        _currentPage,
+        duration: Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+    }
+  }
+
+  void _verifyCode() {
+    setState(() => _isLoading = true);
+    // Votre logique de vérification ici
+
+    Future.delayed(2800.ms, () {
+      setState(() {
+        _isLoading = false;
+      });
+      if (mounted) {
+        Navigator.pushReplacementNamed(context, AppRoutes.home);
+      }
+    });
+  }
+
+// Modifiez votre méthode _resendCode()
+  void _resendCode() {
+    setState(() {
+      _canResend = false;
+      code = List.filled(6, '');
+      _countToResendCode++;
+      _timeToResendCode = _countToResendCode*2;
+      _animationKey = UniqueKey(); // Change la clé pour forcer la reconstruction
+    });
+    // Votre logique pour renvoyer le code ici
   }
 
   @override
@@ -121,117 +183,257 @@ class _RegisterPageState extends State<RegisterPage> {
     colorScheme = theme.colorScheme;
     return Scaffold(
       backgroundColor: colorScheme.background,
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: Form(
-            key: _formKey, // Ajout du formulaire
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const SizedBox(height: 60),
-                // Logo personnalisé avec la palette de couleurs
-                Center(
-                  child: Icon(
-                    Icons.credit_card,
-                    size: 50,
-                    color: colorScheme.primary,
+      body: PageView(
+        controller: _controller,
+        physics: NeverScrollableScrollPhysics(), // Désactive le swipe
+        onPageChanged: (index) {
+          setState(() {
+            _currentPage = index;
+          });
+        },
+        children: [
+          _buildRegisterPage(),
+          _buildConfirmationPage(colorScheme)
+        ],
+      ),
+    );
+  }
+
+  InputDecoration _buildInputDecoration(String label, [IconData? icon, Widget? suffixIcon]) {
+    return InputDecoration(
+      labelText: label,
+      prefixIcon: icon != null ? Icon(icon, color: colorScheme.primary) : null,
+      suffixIcon: suffixIcon,
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+      focusedBorder: OutlineInputBorder(
+        borderSide: BorderSide(color: colorScheme.primary),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      labelStyle: TextStyle(color: colorScheme.onBackground),
+    );
+  }
+
+  void _showTermsDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Conditions générales', style: TextStyle(color: colorScheme.primary)),
+          content: SingleChildScrollView(
+            child: Text(
+              '''
+              1. Vous acceptez de respecter toutes les règles établies par notre plateforme.
+              2. Les informations personnelles que vous fournissez seront traitées conformément à notre politique de confidentialité.
+              3. Nous nous réservons le droit de suspendre ou de supprimer votre compte en cas de non-respect des conditions.
+              4. Les paiements effectués ne sont pas remboursables, sauf indication contraire.
+              5. Les contenus publiés doivent respecter les lois en vigueur et ne pas contenir de propos diffamatoires ou offensants.
+              6. Nous ne sommes pas responsables des pertes ou dommages résultant de l'utilisation de notre plateforme.
+              ''',
+              style: TextStyle(color: colorScheme.onBackground),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: Text('Fermer', style: TextStyle(color: colorScheme.primary)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildRegisterPage(){
+    return SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Form(
+          key: _formKey, // Ajout du formulaire
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const SizedBox(height: 60),
+              // Logo personnalisé avec la palette de couleurs
+              Center(
+                child: Container(
+                  width: 100,
+                  height: 100,
+                  decoration: BoxDecoration(
+                    color: colorScheme.primary.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: colorScheme.primary.withOpacity(0.3),
+                      width: 1,
+                    ),
+                  ),
+                  child: Center(
+                    child: Image.asset('assets/logo/original-logo-symbol-wobg.png', width: 100, height: 100, fit: BoxFit.cover),
                   ),
                 ),
-                Text(
-                  "S'Inscrire",
-                  style: TextStyle(
-                    fontSize: 32,
-                    fontWeight: FontWeight.bold,
-                    color: colorScheme.primary,
-                  ),
-                  textAlign: TextAlign.center,
+              ),
+              Text(
+                "S'Inscrire",
+                style: TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                  color: colorScheme.primary,
                 ),
-                const SizedBox(height: 40),
-                Row(
-                  children: [
-                    Expanded(
-                      flex: 1,
-                      child: TextFormField(
-                        controller: _firstNameController,
-                        validator: (value) => value!.isEmpty ? 'Champ requis' : null,
-                        decoration: _buildInputDecoration('Prénom', Icons.person),
-                      ),
-                    ),
-                    const SizedBox(width: 20),
-                    Expanded(
-                      flex: 1,
-                      child: TextFormField(
-                        controller: _lastNameController,
-                        validator: (value) => value!.isEmpty ? 'Champ requis' : null,
-                        decoration: _buildInputDecoration('Nom', Icons.person),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 20),
-                TextFormField(
-                  controller: _phoneController,
-                  validator: (value) => value!.isEmpty ? 'Champ requis' : null,
-                  keyboardType: TextInputType.phone,
-                  decoration: _buildInputDecoration('Téléphone', Icons.phone),
-                ),
-                const SizedBox(height: 20),
-                TextFormField(
-                  controller: _addressController,
-                  validator: (value) => value!.isEmpty ? 'Champ requis' : null,
-                  keyboardType: TextInputType.text,
-                  decoration: _buildInputDecoration('Addresse', Icons.location_city),
-                ),
-                const SizedBox(height: 20),
-                TextFormField(
-                  controller: _emailController,
-                  validator: (value) => value!.isEmpty
-                      ? 'Champ requis'
-                      : !value.contains('@')
-                      ? 'Email invalide'
-                      : null,
-                  keyboardType: TextInputType.emailAddress,
-                  decoration: _buildInputDecoration('Email', Icons.email),
-                ),
-                const SizedBox(height: 20),
-                TextFormField(
-                  controller: _passwordController,
-                  validator: (value) => value!.length < 6
-                      ? '6 caractères minimum'
-                      : null,
-                  obscureText: true,
-                  decoration: _buildInputDecoration('Mot de passe', Icons.lock),
-                ),
-                const SizedBox(height: 15),
-                Row(
-                  children: [
-                    Checkbox(
-                      value: _isChecked,
-                      activeColor: colorScheme.primary,
-                      checkColor: Colors.white,
-                      onChanged: (bool? value) {
-                        setState(() {
-                          _isChecked = value ?? false;
-                        });
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 40),
+              Row(
+                children: [
+                  Expanded(
+                    flex: 1,
+                    child: TextFormField(
+                      controller: _firstNameController,
+                      validator: (value){
+                        if( value!.isEmpty ){
+                          ScaffoldMessenger.of(context).showSnackBar(
+                              CustomScaffold(
+                                  content: Text('Prénom requis !') ,
+                                  backgroundColor: Colors.red
+                              )
+                          );
+                          return '';
+                        }
+                        return null;
                       },
+                      decoration: _buildInputDecoration('Prénom', Icons.person),
                     ),
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: _showTermsDialog,
-                        child: Text(
-                          'En cliquant sur ce bouton, vous acceptez nos Conditions générales',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: colorScheme.onBackground,
-                          ),
+                  ),
+                  const SizedBox(width: 20),
+                  Expanded(
+                    flex: 1,
+                    child: TextFormField(
+                      controller: _lastNameController,
+                      validator: (value){
+                        if( value!.isEmpty ){
+                          ScaffoldMessenger.of(context).showSnackBar(
+                              CustomScaffold(
+                                  content: Text('Nom requis !') ,
+                                  backgroundColor: Colors.red
+                              )
+                          );
+                          return '';
+                        }
+                        return null;
+                      },
+                      decoration: _buildInputDecoration('Nom', Icons.person),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              IntlPhoneField(
+                decoration: InputDecoration(
+                  labelText: 'Phone number',
+                  hintText: 'Phone number',
+                  contentPadding: EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+                  border: OutlineInputBorder(),
+                ),
+                dropdownIcon: Icon(Icons.arrow_drop_down),
+                initialCountryCode: 'GN',
+                onChanged: (phone) {
+                  // Gérer le changement de numéro
+                  print("phone number is : ${phone.completeNumber}");
+                  setState(() {
+                    _phoneController.text = phone.completeNumber;
+                  });
+                },
+                keyboardType: TextInputType.phone,
+                validator: (phone) {
+                  if (phone == null || phone.number.isEmpty) {
+                    return 'Please enter a valid phone number';
+                  }
+                  return null;
+                },
+                style: TextStyle(fontSize: 16),
+                dropdownTextStyle: TextStyle(fontSize: 16),
+              ),
+              const SizedBox(height: 20),
+              TextFormField(
+                controller: _addressController,
+                validator: (value){
+                  if( value!.isEmpty ){
+                    ScaffoldMessenger.of(context).showSnackBar(
+                        CustomScaffold(
+                            content: Text('Addresse réquise !') ,
+                            backgroundColor: Colors.red
+                        )
+                    );
+                    return '';
+                  }
+                  return null;
+                },
+                keyboardType: TextInputType.text,
+                decoration: _buildInputDecoration('Addresse', Icons.location_city),
+              ),
+              const SizedBox(height: 20),
+              TextFormField(
+                controller: _emailController,
+                validator: (value) => value!.isEmpty
+                    ? 'Champ requis'
+                    : !value.contains('@')
+                    ? 'Email invalide'
+                    : null,
+                keyboardType: TextInputType.emailAddress,
+                decoration: _buildInputDecoration('Email', Icons.email),
+              ),
+              const SizedBox(height: 20),
+              TextFormField(
+                controller: _passwordController,
+                validator: (value) => value!.length < 6
+                    ? '6 caractères minimum'
+                    : null,
+                obscureText: _obscurePassword,
+                decoration: _buildInputDecoration(
+                  'Mot de passe',
+                  Icons.lock,
+                  IconButton(
+                    icon: Icon(
+                      _obscurePassword ? Icons.visibility : Icons.visibility_off,
+                      color: colorScheme.primary,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _obscurePassword = !_obscurePassword;
+                      });
+                    },
+                  ),
+                ),
+              ),
+              const SizedBox(height: 15),
+              Row(
+                children: [
+                  Checkbox(
+                    value: _isChecked,
+                    activeColor: colorScheme.primary,
+                    checkColor: Colors.white,
+                    onChanged: (bool? value) {
+                      setState(() {
+                        _isChecked = value ?? false;
+                      });
+                    },
+                  ),
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: _showTermsDialog,
+                      child: Text(
+                        'En cliquant sur ce bouton, vous acceptez nos Conditions générales',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: colorScheme.onBackground,
                         ),
                       ),
                     ),
-                  ],
-                ),
-                const SizedBox(height: 15),
-                // Bouton d'inscription avec loader
+                  ),
+                ],
+              ),
+              const SizedBox(height: 15),
+              // Bouton d'inscription avec loader
               ElevatedButton(
                 onPressed: _isLoading ? null : _submitForm,
                 style: ElevatedButton.styleFrom(
@@ -261,134 +463,329 @@ class _RegisterPageState extends State<RegisterPage> {
                   ),
                 ),
               ),
-                const SizedBox(height: 10),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      'Vous avez déjà un compte? ',
+              const SizedBox(height: 10),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    'Vous avez déjà un compte? ',
+                    style: TextStyle(
+                      color: colorScheme.onBackground,
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: () {Navigator.pushReplacementNamed(context, AppRoutes.login);},
+                    child: Text(
+                      'Se connecter',
+                      style: TextStyle(
+                        color: colorScheme.primary,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Expanded(
+                    child: Divider(
+                      color: Colors.grey.shade300,
+                      thickness: 1,
+                    ),
+                  ),
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 10),
+                    child: Text(
+                      'OU',
                       style: TextStyle(
                         color: colorScheme.onBackground,
                       ),
                     ),
-                    GestureDetector(
-                      onTap: () {Navigator.pushReplacementNamed(context, AppRoutes.login);},
-                      child: Text(
-                        'Se connecter',
-                        style: TextStyle(
-                          color: colorScheme.primary,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+                  ),
+                  Expanded(
+                    child: Divider(
+                      color: Colors.grey.shade300,
+                      thickness: 1,
                     ),
-                  ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 30),
+              OutlinedButton(
+                onPressed: () {},
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  side: BorderSide(color: colorScheme.onBackground.withOpacity(0.3)),
                 ),
-                const SizedBox(height: 10),
-                Row(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Expanded(
-                      child: Divider(
-                        color: Colors.grey.shade300,
-                        thickness: 1,
-                      ),
+                    Image.asset(
+                      'assets/images/google.png',
+                      width: 24,
+                      height: 24,
                     ),
-                    Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 10),
-                      child: Text(
-                        'OU',
-                        style: TextStyle(
-                          color: colorScheme.onBackground,
-                        ),
-                      ),
-                    ),
-                    Expanded(
-                      child: Divider(
-                        color: Colors.grey.shade300,
-                        thickness: 1,
+                    const SizedBox(width: 12),
+                    Text(
+                      'Continuer avec Google',
+                      style: TextStyle(
+                        color: colorScheme.onBackground,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 30),
-                OutlinedButton(
-                  onPressed: () {},
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    side: BorderSide(color: colorScheme.onBackground.withOpacity(0.3)),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Image.asset(
-                        'assets/images/google.png',
-                        width: 24,
-                        height: 24,
-                      ),
-                      const SizedBox(width: 12),
-                      Text(
-                        'Continuer avec Google',
-                        style: TextStyle(
-                          color: colorScheme.onBackground,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 50),
-              ],
-            ),
+              ),
+              const SizedBox(height: 50),
+            ],
           ),
         ),
       ),
     );
   }
 
-  InputDecoration _buildInputDecoration(String label, [IconData? icon]) {
-    return InputDecoration(
-      labelText: label,
-      prefixIcon: icon != null ? Icon(icon, color: colorScheme.primary) : null,
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-      focusedBorder: OutlineInputBorder(
-        borderSide: BorderSide(color: colorScheme.primary),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      labelStyle: TextStyle(color: colorScheme.onBackground),
-    );
-  }
+  Widget _buildConfirmationPage(ColorScheme colorScheme) {
+    return SingleChildScrollView(
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24.0),
+          child: Column(
+            children: [
+              const SizedBox(height: 30),
+              // En-tête avec animation
+              AnimatedOpacity(
+                opacity: 1.0,
+                duration: const Duration(milliseconds: 500),
+                child: Text(
+                  'Vérification du numéro',
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w700,
+                    color: colorScheme.primary,
+                  ),
+                ),
+              ),
 
-  void _showTermsDialog() {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('Conditions générales', style: TextStyle(color: colorScheme.primary)),
-          content: SingleChildScrollView(
-            child: Text(
-              '''
-              1. Vous acceptez de respecter toutes les règles établies par notre plateforme.
-              2. Les informations personnelles que vous fournissez seront traitées conformément à notre politique de confidentialité.
-              3. Nous nous réservons le droit de suspendre ou de supprimer votre compte en cas de non-respect des conditions.
-              4. Les paiements effectués ne sont pas remboursables, sauf indication contraire.
-              5. Les contenus publiés doivent respecter les lois en vigueur et ne pas contenir de propos diffamatoires ou offensants.
-              6. Nous ne sommes pas responsables des pertes ou dommages résultant de l'utilisation de notre plateforme.
-            ''',
-              style: TextStyle(color: colorScheme.onBackground),
-            ),
+              const SizedBox(height: 40),
+      
+              // Animation du téléphone avec code
+              Container(
+                width: 120,
+                height: 120,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.grey.withOpacity(0.2),
+                      blurRadius: 10,
+                      spreadRadius: 3,
+                    ),
+                  ],
+                ),
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    // Icône de téléphone
+                    Icon(
+                      Icons.phone_iphone,
+                      size: 60,
+                      color: colorScheme.primary,
+                    ),
+                    // Bulle de message
+                    Positioned(
+                      top: 20,
+                      right: 10,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          border: Border.all(
+                            color: colorScheme.primary,
+                            width: 1.5,
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.grey.withOpacity(0.1),
+                              blurRadius: 5,
+                            ),
+                          ],
+                        ),
+                        child: Text(
+                          '••••••',
+                          style: TextStyle(
+                            color: Theme.of(context).primaryColor,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 40),
+      
+              // Texte d'instruction avec numéro formaté
+              RichText(
+                textAlign: TextAlign.center,
+                text: TextSpan(
+                  style: const TextStyle(
+                    fontSize: 16,
+                    color: Colors.black54,
+                    height: 1.5,
+                  ),
+                  children: [
+                    TextSpan(text: 'Entrez le code à 6 chiffres envoyé au\n'),
+                    TextSpan(
+                      text: _phoneController.text, // Utilise le numéro saisi
+                      style: TextStyle(
+                        color: colorScheme.primary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 30),
+      
+              // Champs de code avec saisie
+              Form(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: List.generate(
+                    6, (index) => SizedBox(
+                      width: 45,
+                      height: 60,
+                      child: TextFormField(
+                        controller: TextEditingController(text: code[index]),
+                        keyboardType: TextInputType.number,
+                        maxLength: 1,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: Theme.of(context).primaryColor,
+                        ),
+                        decoration: InputDecoration(
+                          counterText: '',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            borderSide: BorderSide(
+                              color: code[index].isEmpty
+                                  ? Colors.grey.shade300
+                                  : Theme.of(context).primaryColor,
+                              width: 1.5,
+                            ),
+                          ),
+                          filled: true,
+                          fillColor: code[index].isEmpty
+                              ? Colors.grey.shade50
+                              : Colors.white,
+                        ),
+                        onChanged: (value) {
+                          if (value.length == 1) {
+                            setState(() {
+                              code[index] = value;
+                            });
+                            // Passe automatiquement au champ suivant
+                            if (index < 5) {
+                              FocusScope.of(context).nextFocus();
+                            }
+                          } else if (value.isEmpty && index > 0) {
+                            // Retourne au champ précédent si on efface
+                            FocusScope.of(context).previousFocus();
+                          }
+                        },
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 40),
+      
+              // Bouton avec état de chargement
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: colorScheme.primary,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(25),
+                    ),
+                    elevation: 0,
+                  ),
+                  onPressed: _isLoading ? null : _verifyCode,
+                  child: _isLoading
+                      ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                      : const Text(
+                    'VÉRIFIER',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // Modifiez votre TweenAnimationBuilder
+              TweenAnimationBuilder<Duration>(
+                key: _animationKey, // Ajoutez cette ligne
+                tween: Tween(
+                  begin: Duration(minutes: _timeToResendCode),
+                  end: Duration.zero,
+                ),
+                duration: Duration(minutes: _timeToResendCode),
+                builder: (_, Duration value, __) {
+                  final minutes = value.inMinutes;
+                  final seconds = value.inSeconds % 60;
+                  return Text(
+                    'Renvoyer le code dans ${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}',
+                    style: TextStyle(
+                      color: minutes == 0 && seconds == 0
+                          ? Theme.of(context).primaryColor
+                          : Colors.grey,
+                    ),
+                  );
+                },
+                onEnd: () {
+                  setState(() {
+                    _canResend = true;
+                  });
+                },
+              ),
+
+              // Bouton pour renvoyer le code (visible après le compte à rebours)
+              if (_canResend)
+                TextButton(
+                  onPressed: _resendCode,
+                  child: Text(
+                    'Renvoyer le code',
+                    style: TextStyle(
+                      color: colorScheme.primary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+            ],
           ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: Text('Fermer', style: TextStyle(color: colorScheme.primary)),
-            ),
-          ],
-        );
-      },
+        ),
+      ),
     );
   }
 }

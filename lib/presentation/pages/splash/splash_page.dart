@@ -80,9 +80,9 @@ class _SplashPageState extends State<SplashPage> with SingleTickerProviderStateM
                 startAngle: 0,
                 endAngle: _controller.value.clamp(0.01, 1.0) * 2 * 3.1416,
                 colors: [
-                  theme.colorScheme.primary.withOpacity(0.9),
-                  theme.colorScheme.primary.withOpacity(0.7),
-                  theme.colorScheme.primary.withOpacity(0.9),
+                  theme.colorScheme.secondary.withOpacity(0.9),
+                  theme.colorScheme.secondary.withOpacity(0.7),
+                  theme.colorScheme.secondary.withOpacity(0.9),
                 ],
                 stops: const [0.0, 0.5, 1.0],
                 tileMode: TileMode.clamp,
@@ -116,8 +116,7 @@ class _SplashPageState extends State<SplashPage> with SingleTickerProviderStateM
                               FadeEffect(duration: 500.ms),
                             ],
                             child: Image.asset(
-                              'assets/logo/logo.png',
-                              width: size.width * 0.45,
+                              'assets/logo/original-logo-symbol-wobg.png',
                               filterQuality: FilterQuality.high,
                             ),
                           ),

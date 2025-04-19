@@ -93,11 +93,7 @@ class _LoginPageState extends State<LoginPage> {
                           ),
                         ),
                         child: Center(
-                          child: Icon(
-                            Icons.credit_card,
-                            size: 50,
-                            color: colorScheme.primary,
-                          ),
+                          child: Image.asset('assets/logo/original-logo-symbol-wobg.png', width: 100, height: 100, fit: BoxFit.cover),
                         ),
                       ),
                       const SizedBox(height: 24),

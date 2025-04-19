@@ -1,6 +1,10 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:fluttertoast/fluttertoast.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class QrScannerPage extends StatefulWidget {
   const QrScannerPage({super.key});
@@ -10,14 +14,85 @@ class QrScannerPage extends StatefulWidget {
 }
 
 class _QrScannerPageState extends State<QrScannerPage> {
-  final MobileScannerController controller = MobileScannerController();
+  final MobileScannerController controller = MobileScannerController(
+    formats: [BarcodeFormat.qrCode],
+  );
   bool isFlashOn = false;
   bool isFrontCamera = false;
+  bool _isPermissionGranted = false;
+  bool _isScanning = true;
 
   @override
   void initState() {
     super.initState();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersive);
+    _checkCameraPermission();
+  }
+
+  Future<void> _checkCameraPermission() async {
+    final status = await Permission.camera.status;
+    if (status.isGranted) {
+      setState(() => _isPermissionGranted = true);
+    } else {
+      final result = await Permission.camera.request();
+      setState(() => _isPermissionGranted = result.isGranted);
+      if (!_isPermissionGranted) {
+        _showPermissionDeniedDialog();
+      }
+    }
+  }
+
+  void _showPermissionDeniedDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Permission requise'),
+        content: const Text(
+            'L\'application a besoin de l\'accès à la caméra pour scanner les QR codes.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Annuler'),
+          ),
+          TextButton(
+            onPressed: () => openAppSettings(),
+            child: const Text('Paramètres'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _pickImageFromGallery() async {
+    try {
+      final pickedFile = await ImagePicker().pickImage(source: ImageSource.gallery);
+      if (pickedFile != null) {
+        setState(() => _isScanning = false);
+
+        // Utilisation de la méthode correcte pour scanner une image
+        final barcodes = await controller.analyzeImage(pickedFile.path);
+
+        print('barcodes : $barcodes');
+      }
+    } catch (e) {
+      Fluttertoast.showToast(
+        msg: "Erreur lors de l'import: ${e.toString()}",
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+      );
+      debugPrint("Erreur de scan: $e");
+    } finally {
+      setState(() => _isScanning = true);
+    }
+  }
+
+  void _handleScannedValue(String value) {
+    Navigator.pop(context, value);
+    Fluttertoast.showToast(
+      msg: "QR code scanné: $value",
+      toastLength: Toast.LENGTH_SHORT,
+      gravity: ToastGravity.BOTTOM,
+    );
   }
 
   @override
@@ -29,36 +104,33 @@ class _QrScannerPageState extends State<QrScannerPage> {
           IconButton(
             icon: Icon(isFlashOn ? Icons.flash_on : Icons.flash_off),
             onPressed: () {
-              setState(() {
-                isFlashOn = !isFlashOn;
-              });
+              setState(() => isFlashOn = !isFlashOn);
               controller.toggleTorch();
             },
           ),
           IconButton(
             icon: const Icon(Icons.cameraswitch),
             onPressed: () {
-              setState(() {
-                isFrontCamera = !isFrontCamera;
-              });
+              setState(() => isFrontCamera = !isFrontCamera);
               controller.switchCamera();
             },
           ),
         ],
       ),
-      body: Stack(
+      body: !_isPermissionGranted
+          ? const Center(child: Text('Permission caméra requise'))
+          : Stack(
         children: [
-          MobileScanner(
-            controller: controller,
-            onDetect: (capture) {
-              final List<Barcode> barcodes = capture.barcodes;
-              for (final barcode in barcodes) {
-                if (barcode.rawValue != null) {
-                  Navigator.pop(context, barcode.rawValue);
+          if (_isScanning)
+            MobileScanner(
+              controller: controller,
+              onDetect: (capture) {
+                final barcodes = capture.barcodes;
+                if (barcodes.isNotEmpty && barcodes.first.rawValue != null) {
+                  _handleScannedValue(barcodes.first.rawValue!);
                 }
-              }
-            },
-          ),
+              },
+            ),
           CustomPaint(
             painter: QrScannerOverlay(
               borderColor: Theme.of(context).colorScheme.primary,
@@ -71,21 +143,35 @@ class _QrScannerPageState extends State<QrScannerPage> {
             right: 0,
             child: Column(
               children: [
-                Text(
-                  'Scannez un code QR pour effectuer un paiement',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    backgroundColor: Colors.black.withOpacity(0.5),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.7),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    'Scannez un code QR pour effectuer un paiement',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 20),
                 ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: Colors.black,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 24, vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                  ),
                   icon: const Icon(Icons.photo_library),
                   label: const Text('Importer depuis la galerie'),
-                  onPressed: () async {
-                    // Implémentez la logique d'import depuis la galerie
-                  },
+                  onPressed: _pickImageFromGallery,
                 ),
               ],
             ),
@@ -98,6 +184,8 @@ class _QrScannerPageState extends State<QrScannerPage> {
   @override
   void dispose() {
     controller.dispose();
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual,
+        overlays: SystemUiOverlay.values);
     super.dispose();
   }
 }
@@ -131,14 +219,14 @@ class QrScannerOverlay extends CustomPainter {
       transparentPaint,
     );
 
-    // Dessiner le cadre coloré
+    // Dessiner le cadre coloré avec des coins arrondis
     final Paint borderPaint = Paint()
       ..color = borderColor
       ..style = PaintingStyle.stroke
       ..strokeWidth = 4;
 
     const double cornerSize = 30;
-    const double cornerWidth = 4;
+    const double cornerWidth = 8;
 
     // Coins supérieur gauche
     canvas.drawLine(

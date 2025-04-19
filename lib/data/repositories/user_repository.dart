@@ -23,7 +23,7 @@ class UserRepository {
 
   static Future<User?> createUser(User user) async {
     try {
-      final response = await http.post(
+      final http.Response response = await http.post(
         Uri.parse('${baseUrl}account/'),
         headers: <String, String>{
           'Content-Type': 'application/json; charset=UTF-8',
@@ -60,6 +60,45 @@ class UserRepository {
     } on http.ClientException catch (e) {
       throw HttpException('Erreur lors de la requête: ${e.message}');
     }
-    return null;
   }
+
+  static Future<User?> loginUser(Map<String, dynamic> credentials) async {
+      try {
+        final http.Response response = await http.post(
+          Uri.parse('${baseUrl}account/'),
+          headers: <String, String>{
+            'Content-Type': 'application/json; charset=UTF-8',
+          },
+          body: jsonEncode(credentials),
+        );
+
+        if (response.statusCode == 201) {
+          return User.fromJson(jsonDecode(response.body));
+        } else {
+          switch (response.statusCode) {
+            case 400:
+              {
+                Map<String, dynamic> errors = jsonDecode(response.body);
+                if ( errors.containsKey('email') ) {
+                  throw BadRequestException(errors['email'][0]);
+                }
+              }
+            case 401:
+              throw UnauthorizedException('Non autorisé !');
+            case 404:
+              throw NotFoundException('Non trouvé !');
+            case 500:
+              throw ServerException('Erreur interne !');
+            default:
+              throw HttpException('Erreur HTTP ${response.statusCode}');
+          }
+        }
+      } on FormatException catch (_) {
+        throw const FormatException('Format de réponse invalide du serveur');
+      } on SocketException {
+        throw const SocketException('Pas de connexion internet');
+      } on http.ClientException catch (e) {
+        throw HttpException('Erreur lors de la requête: ${e.message}');
+      }
+    }
 }

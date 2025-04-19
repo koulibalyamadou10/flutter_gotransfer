@@ -1,18 +1,24 @@
 import 'package:flutter/material.dart';
 
-class PersonalInfoPage extends StatelessWidget {
-  final Color _primaryColor = const Color(0xFF6C56F5);
-  final Color _accentColor = const Color(0xFFF5A56C);
-  final Color _backgroundColor = const Color(0xFFF8F9FA);
-
+class PersonalInfoPage extends StatefulWidget {
   const PersonalInfoPage({super.key});
 
   @override
+  State<PersonalInfoPage> createState() => _PersonalInfoPageState();
+}
+
+class _PersonalInfoPageState extends State<PersonalInfoPage> {
+
+  late ColorScheme colorScheme;
+
+  @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    colorScheme = theme.colorScheme;
     return Scaffold(
       appBar: AppBar(
         title: const Text('Mon Profil', style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: _primaryColor,
+        backgroundColor: colorScheme.primary,
         elevation: 0,
         centerTitle: true,
         leading: IconButton(
@@ -26,11 +32,12 @@ class PersonalInfoPage extends StatelessWidget {
           ),
         ],
       ),
-      backgroundColor: _backgroundColor,
+      backgroundColor: colorScheme.background,
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
           children: [
+            const SizedBox(height: 10),
             _buildProfileHeader(),
             const SizedBox(height: 25),
             _buildInfoSection(
@@ -78,15 +85,16 @@ class PersonalInfoPage extends StatelessWidget {
         Container(
           height: 120,
           decoration: BoxDecoration(
-            color: _primaryColor,
+            color: colorScheme.primary,
             borderRadius: BorderRadius.circular(15),
           ),
         ),
         Positioned(
-          bottom: 40,
+          left: 10,
+          top: 10,
           child: Container(
-            width: 120,
-            height: 120,
+            width: 100,
+            height: 100,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               border: Border.all(color: Colors.white, width: 4),
@@ -107,34 +115,27 @@ class PersonalInfoPage extends StatelessWidget {
           ),
         ),
         Positioned(
-          bottom: 10,
-          child: Column(
-            children: [
-              const Text(
-                'Koulibaly Amadou',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                decoration: BoxDecoration(
-                  color: _accentColor.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  'Client FlexyBank Premium',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: _accentColor,
-                  ),
-                ),
-              ),
-            ],
+          left: 120,
+          top: 20,
+          child: Text(
+            'Koulibaly Amadou',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+        ),
+        Positioned(
+          left: 120,
+          top: 60,
+          child: Text(
+            'Koulibaly Amadou',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
           ),
         ),
       ],
@@ -159,7 +160,7 @@ class PersonalInfoPage extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(icon, size: 20, color: _primaryColor),
+                Icon(icon, size: 20, color: colorScheme.primary),
                 const SizedBox(width: 8),
                 Text(
                   title,
@@ -215,7 +216,7 @@ class PersonalInfoPage extends StatelessWidget {
           child: ElevatedButton(
             onPressed: () {},
             style: ElevatedButton.styleFrom(
-              backgroundColor: _primaryColor,
+              backgroundColor: colorScheme.background,
               padding: const EdgeInsets.symmetric(vertical: 16),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
