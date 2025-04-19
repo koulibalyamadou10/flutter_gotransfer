@@ -1,14 +1,43 @@
 import 'package:gotransfer/routes/app_routes.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:path/path.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter/widgets.dart';
+import 'package:sqflite/sqflite.dart';
 
 // Variables globales
 // ThemeNotifier themeNotifier = ThemeNotifier();
 
-void main() {
+late Future<Database> database;
+
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  database = openDatabase(
+    // Set the path to the database. Note: Using the `join` function from the
+    // `path` package is best practice to ensure the path is correctly
+    // constructed for each platform.
+    join(await getDatabasesPath(), 'go_transfer.db'),
+    onCreate: (db, version) {
+      print("requete executed");
+      // Run the CREATE TABLE statement on the database.
+      return db.execute(
+        'CREATE TABLE reference('
+            'id INTEGER PRIMARY KEY, '
+            'accessToken TEXT, '
+            'refreshToken TEXT'
+        ');'
+        ''
+        ''
+        'CREATE TABLE usr('
+            'id INTGR PRIMARY KY, '
+            'first_nam',
+      );
+    },
+    version: 1
+  );
+  print("hello : ${getDatabasesPath()}");
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersive);
   runApp(ChangeNotifierProvider(
     create: (context) => ThemeNotifier(),
