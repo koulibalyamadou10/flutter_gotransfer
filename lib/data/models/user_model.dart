@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:ffi';
 
 class User {
   final int? id;
@@ -9,6 +10,9 @@ class User {
   final String address;
   final String? image;
   final String password;
+  final double? balance;
+  final double? commission;
+  late bool isLoaded = false;
 
   User({
     this.id,
@@ -18,6 +22,8 @@ class User {
     required this.phone_number,
     required this.address,
     this.image,
+    this.balance,
+    this.commission,
     required this.password
   });
 
@@ -28,15 +34,17 @@ class User {
       last_name: json['last_name'],
       email: json['email'],
       phone_number: json['phone_number'],
-      address: json['address'],
-      image: json['image'],
-      password: json['password'],
+      address: json['address'] ?? '',
+      image: json['image'] ?? '',
+      balance: double.parse(json['balance']),
+      commission: double.parse(json['commission']),
+      password: json['password'] ?? '',
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
-      /*if (id != null)*/ 'id': id,
+      'id': id,
       'first_name': first_name,
       'last_name': last_name,
       'email': email,
@@ -44,6 +52,8 @@ class User {
       'address': address,
       'image': image,
       'password': password,
+      'balance': balance,
+      'commission': commission,
     };
   }
 

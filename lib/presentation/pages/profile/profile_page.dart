@@ -1,4 +1,5 @@
 import 'package:flutter/services.dart';
+import 'package:gotransfer/data/repositories/user_repository.dart';
 import 'package:gotransfer/main.dart';
 import 'package:gotransfer/routes/app_routes.dart';
 import 'package:flutter/material.dart';
@@ -203,12 +204,17 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
           TextButton(
             onPressed: () {
-              // Ferme toutes les pages et redirige vers le login
-              Navigator.pushNamedAndRemoveUntil(
-                context,
-                AppRoutes.login,
-                    (route) => false,
-              );
+              UserRepository.setUserEmail('').then((onValue){
+                UserRepository.setUserPasswordHashed('').then((onValue){
+                  // Ferme toutes les pages et redirige vers le login
+                  Navigator.pushNamedAndRemoveUntil(
+                    context,
+                    AppRoutes.login,
+                        (route) => false,
+                  );
+                });
+              });
+
 
               // Ici vous pouvez aussi ajouter la logique de nettoyage:
               // - Supprimer les données utilisateur

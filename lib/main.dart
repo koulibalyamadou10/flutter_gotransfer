@@ -37,8 +37,6 @@ Future<void> main() async {
     },
     version: 1
   );
-  print("hello : ${getDatabasesPath()}");
-  SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersive);
   runApp(ChangeNotifierProvider(
     create: (context) => ThemeNotifier(),
       child: const MyApp(),

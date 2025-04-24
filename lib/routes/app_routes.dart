@@ -1,15 +1,16 @@
-import 'package:gotransfer/presentation/pages/auth/login_page.dart';
-import 'package:gotransfer/presentation/pages/auth/register_page.dart';
-import 'package:gotransfer/presentation/pages/bank_cards_page/bank_cards_page.dart';
-import 'package:gotransfer/presentation/pages/history_page/history_page.dart';
-import 'package:gotransfer/presentation/pages/home/home_page.dart';
-import 'package:gotransfer/presentation/pages/home/home_screen.dart';
-import 'package:gotransfer/presentation/pages/money_transfer_page/money_transfer_page.dart';
-import 'package:gotransfer/presentation/pages/personal_info_page/personal_info_page.dart';
-import 'package:gotransfer/presentation/pages/qr_scanner_page/qr_scanner_page.dart';
-import 'package:gotransfer/presentation/pages/recharge_page/recharge_page.dart';
-import 'package:gotransfer/presentation/pages/splash/splash_page.dart';
 import 'package:flutter/material.dart';
+
+import '../presentation/pages/auth/login_page.dart';
+import '../presentation/pages/auth/register_page.dart';
+import '../presentation/pages/bank_cards_page/bank_cards_page.dart';
+import '../presentation/pages/history_page/history_page.dart';
+import '../presentation/pages/home/home_page.dart';
+import '../presentation/pages/home/home_screen.dart';
+import '../presentation/pages/money_transfer_page/money_transfer_page.dart';
+import '../presentation/pages/personal_info_page/personal_info_page.dart';
+import '../presentation/pages/qr_scanner_page/qr_scanner_page.dart';
+import '../presentation/pages/recharge_page/recharge_page.dart';
+import '../presentation/pages/splash/splash_page.dart';
 
 class AppRoutes {
   static const String splash = '/';

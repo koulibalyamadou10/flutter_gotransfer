@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:gotransfer/data/repositories/user_repository.dart';
 import 'package:gotransfer/presentation/widgets/drawer/drawer_layout.dart';
 import 'package:gotransfer/routes/app_routes.dart';
+
+import '../../../data/models/user_model.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -11,6 +14,27 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   late ColorScheme colorScheme;
+  User user = User(
+    first_name: '',
+    last_name: '',
+    email: '',
+    phone_number: '',
+    address: '',
+    password: '',
+    image: ''
+  );
+
+  @override
+  void initState() {
+    super.initState();
+    UserRepository.getUser(context).then((onValue){
+      if( onValue == null ) return;
+      setState(() {
+        user = onValue!;
+        user.isLoaded = true;
+      });
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -60,7 +84,19 @@ class _HomeScreenState extends State<HomeScreen> {
                     children: [
                       Row(
                         children: [
-                          ClipOval(child: Image.asset('assets/images/koulibaly.jpg', width: 50, height: 50, fit: BoxFit.cover)),
+                          (user.image ?? '').isNotEmpty ?
+                            ClipOval(
+                              child: Image.network(
+                                '${user.image}',
+                                width: 50,
+                                height: 50,
+                                fit: BoxFit.cover
+                              )
+                            ) :
+                          Icon(
+                            Icons.account_circle_outlined,
+                            size: 50,
+                          ),
                           SizedBox(width: 5),
                           Container(
                             width: 150,
@@ -72,7 +108,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   top: 5,
                                   width: 150,
                                   height: 20,
-                                  child: Text("koulibaly amadou,", style: TextStyle(fontSize: 16),),
+                                  child: Text("${user.last_name} ${user.first_name}", style: TextStyle(fontSize: 16),),
                                 ),
                                 Positioned(
                                   left: 0,
@@ -136,7 +172,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                         ),
                                         child: Center(
                                           child: Text(
-                                            'KA',
+                                            user.first_name.isEmpty ? '' :
+                                            '${user.first_name[0].toUpperCase()}${user.last_name[0].toUpperCase()}',
                                             style: TextStyle(
                                               color: Colors.white,
                                               fontWeight: FontWeight.bold,
@@ -150,7 +187,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
                                           Text(
-                                            'Koulibaly Amadou',
+                                            '${user.last_name} ${user.first_name}',
                                             style: TextStyle(
                                               color: Colors.white,
                                               fontSize: 18,
@@ -201,7 +238,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                       ),
                                       SizedBox(width: 4),
                                       Text(
-                                        '3 000 000',
+                                        !user.isLoaded ? '' :
+                                        '${user.balance}',
                                         style: TextStyle(
                                           color: Colors.white,
                                           fontSize: 28,

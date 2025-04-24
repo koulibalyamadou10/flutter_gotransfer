@@ -7,4 +7,12 @@ class AppUtils {
   static String formatCurrency(double amount) {
     return '\$${amount.toStringAsFixed(2)}';
   }
+
+  static String encrypt(String password){
+    return password;
+  }
+
+  static String decrypt(String password){
+    return password;
+  }
 }

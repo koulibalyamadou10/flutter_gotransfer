@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:gotransfer/core/utils/helpers.dart';
+import 'package:gotransfer/data/repositories/reference_repository.dart';
+import 'package:gotransfer/data/repositories/user_repository.dart';
 import '../../../routes/app_routes.dart';
 
 class SplashPage extends StatefulWidget {
@@ -38,7 +41,20 @@ class _SplashPageState extends State<SplashPage> with SingleTickerProviderStateM
     Future.delayed(2800.ms, () {
       SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
       if (mounted) {
-        Navigator.pushReplacementNamed(context, AppRoutes.register);
+        UserRepository.getUserEmail().then((onValue) async {
+          String email = onValue;
+          if( email.isEmpty )
+            Navigator.pushReplacementNamed(context, AppRoutes.login);
+          else {
+            String password = (await UserRepository.getUserPasswordHashed());
+            print('password : $password');
+            UserRepository.apiToken(
+              context,
+              email: email,
+              password: AppUtils.decrypt(password)
+            );
+          }
+        });
       }
     });
   }
@@ -115,16 +131,20 @@ class _SplashPageState extends State<SplashPage> with SingleTickerProviderStateM
                               ),
                               FadeEffect(duration: 500.ms),
                             ],
-                            child: Image.asset(
-                              'assets/logo/original-logo-symbol-wobg.png',
-                              filterQuality: FilterQuality.high,
+                            child: Container(
+                              width: 80,
+                              height: 80,
+                              child: Image.asset(
+                                'assets/logo/original-logo-symbol.png',
+                                filterQuality: FilterQuality.high,
+                              ),
                             ),
                           ),
                         ),
                       ),
                       const SizedBox(height: 24),
                       Text(
-                        'GOTransfer',
+                        'GoTransfer',
                         style: TextStyle(
                           fontSize: 32,
                           fontWeight: FontWeight.w700,

@@ -1,5 +1,7 @@
 import 'package:animated_notch_bottom_bar/animated_notch_bottom_bar/animated_notch_bottom_bar.dart';
 import 'package:gotransfer/core/constants/dimensions.dart';
+import 'package:gotransfer/data/models/user_model.dart';
+import 'package:gotransfer/data/repositories/user_repository.dart';
 import 'package:gotransfer/presentation/pages/digital_banking_page/digital_banking_page.dart';
 import 'package:gotransfer/presentation/pages/digital_payments_page/digital_payments_page.dart';
 import 'package:gotransfer/presentation/pages/home/home_screen.dart';

@@ -1,5 +1,9 @@
-import 'package:gotransfer/routes/app_routes.dart';
 import 'package:flutter/material.dart';
+
+import '../../../core/utils/helpers.dart';
+import '../../../data/models/user_model.dart';
+import '../../../data/repositories/user_repository.dart';
+import '../../../routes/app_routes.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -19,14 +23,19 @@ class _LoginPageState extends State<LoginPage> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  bool _obscurePassword = true;
 
   late ColorScheme colorScheme;
 
   @override
   void initState() {
     super.initState();
-    _emailController.text = 'koulibalyamadou10@gmail.com';
-    _passwordController.text = '123456789';
+    UserRepository.getUserEmail().then((onValue){
+      _emailController.text = onValue;
+    });
+    UserRepository.getUserPasswordHashed().then((onValue){
+      _passwordController.text = AppUtils.decrypt(onValue);
+    });
   }
 
   @override
@@ -36,30 +45,38 @@ class _LoginPageState extends State<LoginPage> {
     super.dispose();
   }
 
-  void _submitForm() {
+  void _submitForm() async {
     if (_formKey.currentState!.validate()) {
       setState(() {
         _isLoading = true;
       });
 
-      Future.delayed(const Duration(seconds: 2), () {
-        try {
-          Navigator.pushReplacementNamed(context, AppRoutes.home);
-        } catch (e) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Erreur de connexion: $e'),
-              backgroundColor: const Color(0xFF6200EE),
-            ),
-          );
-        } finally {
-          if (mounted) {
-            setState(() {
-              _isLoading = false;
-            });
-          }
+      try {
+        await UserRepository.login(
+          User(
+              first_name: '',
+              last_name: '',
+              email: _emailController.text,
+              phone_number: '',
+              address: '',
+              password: _passwordController.text
+          ),
+          context
+        );
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur de connexion: $e'),
+            backgroundColor: const Color(0xFF6200EE),
+          ),
+        );
+      } finally {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
         }
-      });
+      }
     }
   }
 
@@ -87,13 +104,9 @@ class _LoginPageState extends State<LoginPage> {
                         decoration: BoxDecoration(
                           color: colorScheme.primary.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: colorScheme.primary.withOpacity(0.3),
-                            width: 1,
-                          ),
                         ),
                         child: Center(
-                          child: Image.asset('assets/logo/original-logo-symbol-wobg.png', width: 100, height: 100, fit: BoxFit.cover),
+                          child: Image.asset('assets/logo/original-logo-symbol.png', width: 100, height: 100, fit: BoxFit.cover),
                         ),
                       ),
                       const SizedBox(height: 24),
@@ -136,8 +149,22 @@ class _LoginPageState extends State<LoginPage> {
                     validator: (value) => value!.length < 6
                         ? '6 caractères minimum'
                         : null,
-                    obscureText: true,
-                    decoration: _buildInputDecoration('Mot de passe', Icons.lock),
+                    obscureText: _obscurePassword,
+                    decoration: _buildInputDecoration(
+                      'Mot de passe',
+                      Icons.lock,
+                      IconButton(
+                        icon: Icon(
+                          _obscurePassword ? Icons.visibility : Icons.visibility_off,
+                          color: colorScheme.primary,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _obscurePassword = !_obscurePassword;
+                          });
+                        },
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 16),
 
@@ -365,10 +392,11 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
-  InputDecoration _buildInputDecoration(String label, [IconData? icon]) {
+  InputDecoration _buildInputDecoration(String label, [IconData? icon, Widget? suffixIcon]) {
     return InputDecoration(
       labelText: label,
       prefixIcon: icon != null ? Icon(icon, color: colorScheme.primary) : null,
+      suffixIcon: suffixIcon,
       border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
       focusedBorder: OutlineInputBorder(
         borderSide: BorderSide(color: colorScheme.primary),

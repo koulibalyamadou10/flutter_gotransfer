@@ -51,7 +51,7 @@ class _RegisterPageState extends State<RegisterPage> {
     _emailController.text = 'koulibalyamadou11@gmail.com';
     _passwordController.text = '123456789';
     _addressController.text = 'kiroty';
-    _phoneController.text = '621820065';
+    _phoneController.text = '+224621820065';
   }
 
   @override
@@ -82,7 +82,7 @@ class _RegisterPageState extends State<RegisterPage> {
       await Future.delayed(const Duration(seconds: 2));
 
 
-      final user = await UserRepository.createUser(
+      final user = await UserRepository.register(
         User(
           first_name: _firstNameController.text,
           last_name: _lastNameController.text,
@@ -90,17 +90,11 @@ class _RegisterPageState extends State<RegisterPage> {
           email: _emailController.text,
           password: _passwordController.text,
           address: _addressController.text,
+          commission: 0
         ),
+        null,
+        context
       );
-      if( user == null ) return;
-      final saved = await UserPreferences.saveUser(user.toJson());
-      if (saved) {
-        print('Utilisateur sauvegardé avec succès');
-        _controller.nextPage(duration: Duration(seconds: 1), curve: Curves.easeInOut);
-        //Navigator.pushReplacementNamed(context, AppRoutes.home);
-      } else {
-        print('Utilisateur non sauvegardé !');
-      }
     } on HttpException catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -263,13 +257,9 @@ class _RegisterPageState extends State<RegisterPage> {
                   decoration: BoxDecoration(
                     color: colorScheme.primary.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: colorScheme.primary.withOpacity(0.3),
-                      width: 1,
-                    ),
                   ),
                   child: Center(
-                    child: Image.asset('assets/logo/original-logo-symbol-wobg.png', width: 100, height: 100, fit: BoxFit.cover),
+                    child: Image.asset('assets/logo/original-logo-symbol.png', width: 100, height: 100, fit: BoxFit.cover),
                   ),
                 ),
               ),
