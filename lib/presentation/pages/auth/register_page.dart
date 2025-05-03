@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:gotransfer/config/app_config.dart';
 import 'package:gotransfer/routes/app_routes.dart';
 import 'package:flutter/material.dart';
 import 'package:intl_phone_field/intl_phone_field.dart';
@@ -33,6 +34,7 @@ class _RegisterPageState extends State<RegisterPage> {
   final TextEditingController _firstNameController = TextEditingController();
   final TextEditingController _lastNameController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
+  final TextEditingController _countryController = TextEditingController();
   final TextEditingController _addressController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
@@ -74,26 +76,32 @@ class _RegisterPageState extends State<RegisterPage> {
       );
       return;
     }
+    if( _countryController.text.isEmpty ){
+      ScaffoldMessenger.of(context).showSnackBar(
+          CustomScaffold(
+              content: Text('Numero non pris en charge pour le moment !'),
+              backgroundColor: Colors.red
+          )
+      );
+      return;
+    }
 
     setState(() => _isLoading = true);
 
     try {
-      // Simulation d'une requête API (remplacez par votre logique réelle)
-      await Future.delayed(const Duration(seconds: 2));
-
-
       final user = await UserRepository.register(
         User(
           first_name: _firstNameController.text,
           last_name: _lastNameController.text,
           phone_number: _phoneController.text,
+          country: _countryController.text,
           email: _emailController.text,
           password: _passwordController.text,
           address: _addressController.text,
           commission: 0
         ),
         null,
-        context
+        context,
       );
     } on HttpException catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -331,6 +339,7 @@ class _RegisterPageState extends State<RegisterPage> {
                   print("phone number is : ${phone.completeNumber}");
                   setState(() {
                     _phoneController.text = phone.completeNumber;
+                    _countryController.text = AppConfig.codeToCountry[phone.countryCode] ?? '';
                   });
                 },
                 keyboardType: TextInputType.phone,

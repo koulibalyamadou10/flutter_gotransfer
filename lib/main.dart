@@ -31,6 +31,7 @@ Future<void> main() async {
         ''
         ''
         'CREATE TABLE usr('
+
             'id INTGR PRIMARY KY, '
             'first_nam',
       );

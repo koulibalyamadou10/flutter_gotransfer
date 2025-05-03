@@ -14,6 +14,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   late ColorScheme colorScheme;
+  bool _isLoading = true;
   User user = User(
     first_name: '',
     last_name: '',
@@ -32,6 +33,7 @@ class _HomeScreenState extends State<HomeScreen> {
       setState(() {
         user = onValue!;
         user.isLoaded = true;
+        _isLoading = false;
       });
     });
   }
@@ -44,7 +46,8 @@ class _HomeScreenState extends State<HomeScreen> {
       drawer: DrawerLayoute(),
       backgroundColor: colorScheme.background,
       body: SafeArea(
-        child: SingleChildScrollView(
+        child: _isLoading ? Center(child: CircularProgressIndicator(color: colorScheme.primary)) :
+        SingleChildScrollView(
           physics: const BouncingScrollPhysics(),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20.0),
@@ -85,14 +88,14 @@ class _HomeScreenState extends State<HomeScreen> {
                       Row(
                         children: [
                           (user.image ?? '').isNotEmpty ?
-                            ClipOval(
+                          ClipOval(
                               child: Image.network(
-                                '${user.image}',
-                                width: 50,
-                                height: 50,
-                                fit: BoxFit.cover
+                                  '${user.image}',
+                                  width: 50,
+                                  height: 50,
+                                  fit: BoxFit.cover
                               )
-                            ) :
+                          ) :
                           Icon(
                             Icons.account_circle_outlined,
                             size: 50,
@@ -279,56 +282,6 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ],
                   ),
-                ),
-
-                // Section Cartes
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8.0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Cards',
-                        style: TextStyle(
-                          color: colorScheme.onBackground,
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Text(
-                        'Voir tout',
-                        style: TextStyle(
-                          color: colorScheme.primary,
-                          fontSize: 14,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                // Liste des cartes
-                _buildCardItem(
-                  logo: 'assets/mastercard.png',
-                  name: 'Tinkoff Gold',
-                  cardType: 'Mastercard',
-                  last4: '6789',
-                  amount: '\$1,679.00',
-                  textColor: colorScheme.onBackground,
-                  secondaryTextColor: colorScheme.onBackground,
-                  isCredit: true,
-                ),
-
-                Divider(height: 1, color: colorScheme.onBackground.withOpacity(0.1)),
-
-                _buildCardItem(
-                  logo: 'assets/visa.png',
-                  name: 'Visa Platinum',
-                  cardType: 'Visa',
-                  last4: '6789',
-                  amount: '\$2,246.00',
-                  textColor: colorScheme.onBackground,
-                  secondaryTextColor: colorScheme.onBackground,
-                  isCredit: false,
                 ),
 
                 // Section Today

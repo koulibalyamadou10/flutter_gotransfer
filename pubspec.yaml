@@ -51,11 +51,15 @@ dependencies:
   intl_phone_field: ^3.2.0
   image_picker: ^1.1.2
   fluttertoast: ^8.2.12
-  permission_handler: ^11.4.0
+  permission_handler: ^12.0.0+1
   sqflite: ^2.4.2
   path: ^1.9.1
   dropdown_button2: ^2.3.9
-  contacts_service: ^0.6.3
+  drop_down_list: ^2.0.0
+  modal_bottom_sheet: ^3.0.0
+  flutter_native_contact_picker: ^0.0.10
+  toastification: ^3.0.2
+  flutter_vector_icons: ^2.0.0
 
 dev_dependencies:
   flutter_test:

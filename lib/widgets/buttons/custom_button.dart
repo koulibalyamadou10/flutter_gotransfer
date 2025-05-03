@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 
-class CustomButton extends StatelessWidget {
+class CustomButton extends StatefulWidget {
   final String text;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
   final Color backgroundColor;
+  final Color loadingColor;
   final Color textColor;
   final double borderRadius;
   final EdgeInsets padding;
@@ -20,8 +21,9 @@ class CustomButton extends StatelessWidget {
   const CustomButton({
     Key? key,
     required this.text,
-    required this.onTap,
+    this.onTap,
     this.backgroundColor = Colors.blue,
+    this.loadingColor = Colors.grey, // 👈 nouvelle couleur pour l'état de chargement
     this.textColor = Colors.white,
     this.borderRadius = 8.0,
     this.padding = const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
@@ -35,47 +37,65 @@ class CustomButton extends StatelessWidget {
     this.textStyle,
     this.borderSide = BorderSide.none,
   }) : super(key: key);
+  @override
+  State<CustomButton> createState() => _CustomButtonState();
+}
 
+class _CustomButtonState extends State<CustomButton> {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: isFullWidth ? double.infinity : width,
-      height: height,
+      width: widget.isFullWidth ? double.infinity : widget.width,
+      height: widget.height,
       child: ElevatedButton(
-        onPressed: isLoading ? null : onTap,
+        onPressed: widget.isLoading || widget.onTap == null ? null : widget.onTap,
         style: ElevatedButton.styleFrom(
-          backgroundColor: backgroundColor,
-          foregroundColor: textColor,
+          backgroundColor: widget.backgroundColor, // 👈 couleur dynamique
+          foregroundColor: widget.textColor,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(borderRadius),
-            side: borderSide,
+            borderRadius: BorderRadius.circular(widget.borderRadius),
+            side: widget.borderSide,
           ),
-          elevation: elevation,
-          padding: padding,
+          elevation: widget.elevation,
+          padding: widget.padding,
         ),
-        child: isLoading
-            ? const CircularProgressIndicator(
-          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+        child: widget.isLoading
+            ? Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: const [
+            SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                strokeWidth: 2.5,
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+              ),
+            ),
+            SizedBox(width: 12),
+            Text("Chargement..."), // 👈 Texte optionnel pendant le loading
+          ],
         )
             : Row(
           mainAxisAlignment: MainAxisAlignment.center,
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (prefixIcon != null) ...[
-              prefixIcon!,
+            if (widget.prefixIcon != null) ...[
+              widget.prefixIcon!,
               const SizedBox(width: 8),
             ],
             Text(
-              text,
-              style: textStyle ?? TextStyle(
-                color: textColor,
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-              ),
+              widget.text,
+              style: widget.textStyle ??
+                  TextStyle(
+                    color: widget.textColor,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
             ),
-            if (suffixIcon != null) ...[
+            if (widget.suffixIcon != null) ...[
               const SizedBox(width: 8),
-              suffixIcon!,
+              widget.suffixIcon!,
             ],
           ],
         ),

@@ -11,7 +11,14 @@ class ApiConfig {
   static const String apiTokenEndpoint = '${protocol}://${host}${port}/api/token/';
   static const String apiTokenRefreshEndpoint = '${protocol}://${host}${port}/api/token/refresh/';
 
-  static const String addDestinataireEndpoint = '${protocol}://${host}${port}/destinataire/';
+  static const String addDestinataireEndpoint = '${protocol}://${host}${port}/beneficiary/register/';
+  static const String getCountryCodeEndpoint = '${protocol}://${host}${port}/beneficiary/get_country_code/';
+  static const String getXRateEndpoint = '${protocol}://${host}${port}/xrate/convert/';
+
+  static const String addRemittanceEndpoint = '${protocol}://${host}${port}/remittance/';
+  
+  static const String addTopupEndpoint = '${protocol}://${host}${port}/topup/create/';
+  static const String listProductTopupEndpoint = '${protocol}://${host}${port}/topup/products/';
 
   static const String paymentEndpoint = '/payments';
   static const String transferEndpoint = '/transfers';

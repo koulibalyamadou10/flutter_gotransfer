@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -18,16 +19,15 @@ class UserRepository {
   static final String USER = 'user';
   static final String PASSWORDHASHED = 'passwordHashed';
   static final String EMAIL = 'email';
+  static final String CURReNTPAGe = 'currentPage';
 
-  /// Author : koulibaly amadou
-  /// Email  : koulibalyamadou10@gmail.com
-  /// Desc   : Cette fonction permet de creer un utilisateur avec une image
-  static Future<void> register(User user, File? image, BuildContext context,) async {
+  static Future<void> register(User user, File? image, BuildContext context, {bool isSavedSession = true}) async {
     try {
       // Prepare the request
       var request = http.MultipartRequest('POST', Uri.parse(ApiConfig.registerEndpoint))
         ..fields['first_name'] = user.first_name
         ..fields['last_name'] = user.last_name
+        ..fields['country'] = user.country ?? ''
         ..fields['email'] = user.email
         ..fields['phone_number'] = user.phone_number
         ..fields['address'] = user.address
@@ -39,12 +39,20 @@ class UserRepository {
       // Check the response status
       if (response.statusCode == 201) {
         Map<String, dynamic> succss = jsonDecode(await response.stream.bytesToString());
-        UserRepository.setUserEmail(succss['email']);
+          await UserRepository.setUserEmail(user.email) && await UserRepository.setUserPasswordHashed(user.password);
         ScaffoldMessenger.of(context).showSnackBar(
           CustomSnackBar(
             content: Text('Utilisateur créé avec succès !'),
             backgroundColor: Colors.green,
           ),
+        );
+        Navigator.pushReplacementNamed(
+          context, 
+          AppRoutes.login,
+          arguments: {
+            'email': user.email,
+            'password': user.password
+          }
         );
       } else {
         Map<String, dynamic> errors = jsonDecode(await response.stream.bytesToString());
@@ -56,6 +64,8 @@ class UserRepository {
                   errors['phone_number'][0] :
                   errors.containsKey('email') ?
                       errors['email'][0]:
+                      errors.containsKey('country')?
+                          errors['country'][0] :
                       'Erreur Interne'
             ),
             backgroundColor: Colors.red,
@@ -72,10 +82,7 @@ class UserRepository {
     }
   }
 
-  /// Author : koulibaly amadou
-  /// Email  : koulibalyamadou10@gmail.com
-  /// Desc  : Cette fonction permet de connecter un utilisateur avec un mail et un password
-  static Future<void> login(User user, BuildContext context) async {
+  static Future<void> login(User user, BuildContext context, {bool isSavedSession = true}) async {
     try {
       var response = await http.post(
           Uri.parse(ApiConfig.loginEndpoint),
@@ -95,10 +102,12 @@ class UserRepository {
                 accessToken: success[ReferenceRepository.ACCESSTOKEN],
                 refreshToken: success[ReferenceRepository.REFRESHTOKEN]
             )
-        ) && await UserRepository.setUserInSharedPreferences(User.fromJson(success[UserRepository.USER]))
-            && await UserRepository.setUserEmail(success[UserRepository.USER]['email'])
-            && await UserRepository.setUserPasswordHashed(user.password);
-        if ( result ) Navigator.popAndPushNamed(context, AppRoutes.home );
+        ) && await UserRepository.setUserInSharedPreferences(User.fromJson(success[UserRepository.USER]));
+        if( isSavedSession ){
+            await UserRepository.setUserEmail(success[UserRepository.USER]['email']) && await UserRepository.setUserPasswordHashed(user.password);
+        }
+        String cp = (await UserRepository.getUserCurrentPage());
+        if ( result ) Navigator.popAndPushNamed(context, cp.isEmpty ? AppRoutes.home : cp );
       }else {
         ScaffoldMessenger.of(context).showSnackBar(
             CustomSnackBar(content: Text(
@@ -138,7 +147,7 @@ class UserRepository {
 
       if (response.statusCode == 200) {
         Map<String, dynamic> success = jsonDecode(response.body);
-        print(success);
+        await UserRepository.setUserInSharedPreferences(User.fromJson(success));
         return User.fromJson(success);
       } else if (response.statusCode == 401) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -167,19 +176,15 @@ class UserRepository {
     return null;
   }
 
-  /// Author : koulibaly amadou
-  /// Email  : koulibalyamadou10@gmail.com
-  /// Desc   : Cette fonction permet de stocker l'utilisateur dans le sharedpreferences
   static Future<bool> setUserInSharedPreferences(User user) async {
     SharedPreferences sharedPreferences = await SharedPreferences.getInstance();
     return await sharedPreferences.setString(USER, jsonEncode(user.toJson()));
   }
 
-  /// Author : koulibaly amadou
-  /// Email  : koulibalyamadou10@gmail.com
-  /// Desc   : Cette fonction permet de recuperer le user stocké dans le sharedpreferences
   static Future<User> getUserInSharedPreferences() async {
     SharedPreferences sharedPreferences = await SharedPreferences.getInstance();
+    print('pository');
+    print(await sharedPreferences.getString(USER));
     return User.fromJson(jsonDecode(await sharedPreferences.getString(USER) ?? '{}' ));
   }
 
@@ -203,38 +208,57 @@ class UserRepository {
     return await sharedPreferences.getString(EMAIL) ?? '';
   }
 
-  static Future<void> apiToken(BuildContext context, {String email = '', String password = ''}) async {
-    try{
-      var response = await http.post(
-          Uri.parse(ApiConfig.apiTokenEndpoint),
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode(
-              {
-                'email': email.isEmpty ? (await getUserInSharedPreferences()).email : email,
-                'password': password.isEmpty ? (await getUserInSharedPreferences()).password : password
-              }
-          )
-      );
+  static Future<bool> setUserCurrentPage(String currentPage) async {
+    SharedPreferences sharedPreferences = await SharedPreferences.getInstance();
+    return await sharedPreferences.setString(CURReNTPAGe, '');
+  }
 
-      if( response.statusCode == 200 ){
+  static Future<String> getUserCurrentPage() async {
+    SharedPreferences sharedPreferences = await SharedPreferences.getInstance();
+    return await sharedPreferences.getString(CURReNTPAGe) ?? '';
+  }
+
+  static Future<void> apiToken(BuildContext context, {String email = '', String password = ''}) async {
+    try {
+      var response = await http.post(
+        Uri.parse(ApiConfig.apiTokenEndpoint),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(
+          {
+            'email': email.isEmpty ? (await getUserInSharedPreferences()).email : email,
+            'password': password.isEmpty ? (await getUserInSharedPreferences()).password : password
+          },
+        ),
+      ).timeout(const Duration(seconds: 10)); // ⏰ Maximum 10 secondes d'attente
+
+      if (response.statusCode == 200) {
         Map<String, dynamic> success = jsonDecode(response.body);
         await ReferenceRepository.setReferenceInSharedReference(
-            Reference(
-                id: 1,
-                accessToken: success[ReferenceRepository.ACCESSTOKEN],
-                refreshToken: success[ReferenceRepository.REFRESHTOKEN]
-            )
+          Reference(
+            id: 1,
+            accessToken: success[ReferenceRepository.ACCESSTOKEN],
+            refreshToken: success[ReferenceRepository.REFRESHTOKEN],
+          ),
         );
-        Navigator.pushReplacementNamed(context, AppRoutes.home);
-      }else {
-        // ScaffoldMessenger.of(context).showSnackBar(
-        //     CustomSnackBar(content: Text('Erreur : ${response.body}'), backgroundColor: Colors.red)
-        // );
+        String cp = (await UserRepository.getUserCurrentPage());
+        await UserRepository.setUserCurrentPage('');
+        Navigator.pushReplacementNamed(
+          context, cp.isEmpty ? AppRoutes.login : cp
+         );
+      } else {
         Navigator.pushReplacementNamed(context, AppRoutes.login);
       }
-    }catch( e ) {
+    } on TimeoutException catch (_) {
       ScaffoldMessenger.of(context).showSnackBar(
-          CustomSnackBar(content: Text('Erreur : $e'), backgroundColor: Colors.red)
+        CustomSnackBar(content: Text('Erreur : Le serveur met trop de temps à répondre.'), backgroundColor: Colors.red),
+      );
+    } on http.ClientException catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        CustomSnackBar(content: Text('Erreur de connexion : ${e.message}'), backgroundColor: Colors.red),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        CustomSnackBar(content: Text('Une erreur est survenue : $e'), backgroundColor: Colors.red),
       );
     }
   }

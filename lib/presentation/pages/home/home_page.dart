@@ -34,8 +34,8 @@ class _HomePageState extends State<HomePage> {
 
   final List<Widget> _pages = [
     HomeScreen(),
-    DigitalPaymentsPage(),
     MoneyTransferPage(),
+    DigitalPaymentsPage(),
     ProfilePage(),
   ];
 
@@ -81,19 +81,6 @@ class _HomePageState extends State<HomePage> {
             itemLabel: 'Accueil',
           ),
           BottomBarItem(
-            inActiveItem: Icon(
-              Icons.credit_card_outlined,
-              color: Colors.white,
-              size: AppDimensions.bottomNavigationBarInactiveIconSize,
-            ),
-            activeItem: Icon(
-              Icons.credit_card,
-              color: Colors.white,
-              size: AppDimensions.bottomNavigationBarActiveIconSize,
-            ),
-            itemLabel: 'Paiements',
-          ),
-          BottomBarItem(
             inActiveItem: FaIcon(
               FontAwesomeIcons.moneyBillTransfer,
               color: Colors.white,
@@ -105,6 +92,19 @@ class _HomePageState extends State<HomePage> {
               size: AppDimensions.bottomNavigationBarActiveIconSize,
             ),
             itemLabel: 'Transfert',
+          ),
+          BottomBarItem(
+            inActiveItem: Icon(
+              Icons.credit_card_outlined,
+              color: Colors.white,
+              size: AppDimensions.bottomNavigationBarInactiveIconSize,
+            ),
+            activeItem: Icon(
+              Icons.credit_card,
+              color: Colors.white,
+              size: AppDimensions.bottomNavigationBarActiveIconSize,
+            ),
+            itemLabel: 'Topup',
           ),
           BottomBarItem(
             inActiveItem: Icon(

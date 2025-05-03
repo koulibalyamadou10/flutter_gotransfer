@@ -34,7 +34,7 @@ class _LoginPageState extends State<LoginPage> {
       _emailController.text = onValue;
     });
     UserRepository.getUserPasswordHashed().then((onValue){
-      _passwordController.text = AppUtils.decrypt(onValue);
+      _passwordController.text = Helpers.decrypt(onValue);
     });
   }
 
@@ -61,7 +61,8 @@ class _LoginPageState extends State<LoginPage> {
               address: '',
               password: _passwordController.text
           ),
-          context
+          context,
+          isSavedSession: _rememberMe,
         );
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -84,6 +85,16 @@ class _LoginPageState extends State<LoginPage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     colorScheme = theme.colorScheme;
+
+    final arguments = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>? ?? {};
+    final email = arguments['email'] ?? '';
+    final password = arguments['password'] ?? '';
+
+    setState(() {
+      _emailController.text = _emailController.text.isEmpty ? email ?? '' : _emailController.text;
+      _passwordController.text = _passwordController.text.isEmpty ? password ?? '' : _passwordController.text;
+    });
+    
     return Scaffold(
       backgroundColor: colorScheme.background,
       body: SafeArea(
