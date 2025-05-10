@@ -214,6 +214,7 @@ class _MoneyTransferPageState extends State<MoneyTransferPage> {
         context,
         fToast
       );
+      print(rs);
       setState(() {
         _targetCurrencyLoader = false;
         _isLoading = true;
@@ -278,19 +279,19 @@ class _MoneyTransferPageState extends State<MoneyTransferPage> {
 
       bool rs = await RemittanceRepository.create(
           Remittance(
-            transactionId: '', // Génère un ID unique basé sur le timestamp
+            transactionId: '',
             senderId: 0,
             roleId: role!.id,
             cashoutLocation: role!.country,
             payoutOption: _selectedPaymentMethod,
-            amountSent: double.tryParse(_amountSendController.text) ?? 0,
+            amountSent: data['amount'],
             senderCurrency: senderCurrency,
             exchangeRate: data['ratio'],
-            recipientAmount: double.tryParse(_amountReceiveController.text) ?? 0,
+            recipientAmount: data['ratio'] * data['amount'],
             recipientCurrency: role!.countryCurrency, // Devise du bénéficiaire (Guinée)
             agentProfit: 0,
-            fees: double.tryParse(_feesController.text) ?? 0,
-            total: double.tryParse(_totalController.text) ?? 0,
+            fees: data['total_fee'],
+            total: data['total_amount'],
             status: 'REQUESTED',
             transactionCompletionDate: null, // À compléter quand la transaction est terminée
             agentStartUsername: null, // Nom d'utilisateur de l'agent qui initie
@@ -608,14 +609,14 @@ class _MoneyTransferPageState extends State<MoneyTransferPage> {
               const SizedBox(height: 16),
 
               // Titre
-              Text('Transfert Soumis!',
+              Text('Transaction Soumise!',
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
                     color: Colors.blue[800],
                   )),
               const SizedBox(height: 8),
-              Text('Votre transaction a été soumis avec succès',
+              Text('Votre transaction a été soumise avec succès',
                   style: TextStyle(
                     color: Colors.grey[600],
                     fontSize: 14,
@@ -634,7 +635,7 @@ class _MoneyTransferPageState extends State<MoneyTransferPage> {
                     _buildDetailRow('Destinataire:', _selectedContact.split('-')[0]),
                     const Divider(height: 20, thickness: 0.5),
                     _buildDetailRow('Montant envoyé:',
-                        '${_amountSendController.text} CAD',
+                        '${_amountSendController.text}',
                         isAmount: true),
                     const Divider(height: 20, thickness: 0.5),
                     _buildDetailRow('Montant reçu:',

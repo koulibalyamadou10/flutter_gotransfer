@@ -498,7 +498,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final recipientAmount = '${remittance.recipientAmount.toStringAsFixed(2)} ${remittance.recipientCurrency}';
 
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      padding: const EdgeInsets.symmetric(vertical: 2.0),
       child: Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
@@ -589,7 +589,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         '${recipientAmount}',
                         style: TextStyle(
                           color: colorScheme.onSurface.withOpacity(0.6),
-                          fontSize: 11,
+                          fontSize: 14,
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -598,10 +598,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
 
-              // Date et autres infos
-              const SizedBox(height: 12),
-              Divider(height: 1, color: colorScheme.onSurface.withOpacity(0.1)),
-              const SizedBox(height: 8),
+              SizedBox(height: 2*AppDimensions.smallPadding),
 
               // Ligne inferieur avec statut et montant
               Row(
@@ -985,6 +982,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               color: colorScheme.onSurface.withOpacity(0.6),
                               fontSize: 13,
                             ),
+                            maxLines: 3,
                           ),
                           const Spacer(),
                           Text(
