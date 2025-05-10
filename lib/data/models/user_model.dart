@@ -21,6 +21,7 @@ class User {
   List<Role> roles = [];
   List<Remittance> remittances_today = [];
   List<Remittance> remittances_last = [];
+  List<Remittance> remittances_requested = [];
   late bool isLoaded = false;
 
   User({
@@ -56,6 +57,7 @@ class User {
     List<dynamic> rolesJson = json['roles'] ?? [];
     List<dynamic> remittancesTodayJson = json['remittances_today'] ?? [];
     List<dynamic> remittancesLastJson = json['remittances_last'] ?? [];
+    List<dynamic> remittancesRequestedJson = json['remittances_requested'] ?? [];
 
     List<Role> roles = rolesJson
         .map((roleJson) => Role.fromJson(roleJson))
@@ -66,9 +68,13 @@ class User {
     List<Remittance> remittancesLast = remittancesLastJson
         .map((remittanceJson) => Remittance.fromJson(remittanceJson))
         .toList();
+    List<Remittance> remittancesRequested = remittancesRequestedJson
+        .map((remittanceRequestedJson) => Remittance.fromJson(remittanceRequestedJson))
+        .toList();
     user.roles = roles;
     user.remittances_today = remittances_today;
     user.remittances_last = remittancesLast;
+    user.remittances_requested = remittancesRequested;
     return user;
   }
 

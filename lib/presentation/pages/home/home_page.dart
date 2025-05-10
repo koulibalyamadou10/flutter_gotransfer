@@ -100,7 +100,7 @@ class _HomePageState extends State<HomePage> {
               size: AppDimensions.bottomNavigationBarInactiveIconSize,
             ),
             activeItem: Icon(
-              Icons.credit_card,
+              Icons.phone,
               color: Colors.white,
               size: AppDimensions.bottomNavigationBarActiveIconSize,
             ),

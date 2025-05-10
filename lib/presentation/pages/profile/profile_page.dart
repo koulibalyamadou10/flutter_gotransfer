@@ -5,6 +5,8 @@ import 'package:gotransfer/routes/app_routes.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../data/models/user_model.dart';
+
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
 
@@ -14,11 +16,17 @@ class ProfilePage extends StatefulWidget {
 
 class _ProfilePageState extends State<ProfilePage> {
   late ColorScheme colorScheme;
+  late User user;
 
   @override
   void initState() {
     super.initState();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersive);
+    UserRepository.getUserInSharedPreferences().then((userReference) {
+      setState(() {
+        user = userReference;
+      });
+    });
   }
 
   @override
@@ -78,7 +86,7 @@ class _ProfilePageState extends State<ProfilePage> {
                         ),
                         const SizedBox(height: 16),
                         Text(
-                          'Koulibaly Amadou',
+                          '${user == null ? '...' : '${user.firstName} ${user.lastName}'}',
                           style: TextStyle(
                             color: colorScheme.background,
                             fontSize: 18,

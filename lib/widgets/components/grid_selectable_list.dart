@@ -100,7 +100,7 @@ class _GridSelectableListState extends State<GridSelectableList> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   ...[
-                  Image.asset(item.asset, width: 75, height: 45),
+                  Image.asset(item.asset, width: 90, height: 45),
                   const SizedBox(width: 6),
                 ],
                   SizedBox(height: 20),

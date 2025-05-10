@@ -164,44 +164,52 @@ class RoleRepository {
         return success;
       }else if(response.statusCode == 400 ) {
         Map<String, dynamic> errors = decodedResponse;
-        ScaffoldMessenger.of(context).showSnackBar(
-            CustomSnackBar(content: Text(
-                errors.containsKey('detail') ? errors['detail'] :
-                errors.containsKey('phone_number') ? errors['phone_number'][0] :
-                'Une erreur est survenue !'
-            ), backgroundColor: Colors.red)
+        fToast.showToast(
+            child: CustomToast(
+              message: errors.containsKey('detail') ? errors['detail'] :
+              errors.containsKey('phone_number') ? errors['phone_number'][0] :
+              'Une erreur est survenue !',
+              backgroundColor: Colors.red,
+            ),
+            gravity: ToastGravity.TOP
         );
       }else if(response.statusCode == 401 ) {
-        Map<String, dynamic> errors = jsonDecode(response.body);
-        print(errors);
-        ScaffoldMessenger.of(context).showSnackBar(
-            CustomSnackBar(content: Text(
-                'Votre session a expiré !'
-            ), backgroundColor: Colors.red)
+        Map<String, dynamic> errors = decodedResponse;
+        fToast.showToast(
+            child: CustomToast(
+              message: 'Votre session a expiré !',
+              backgroundColor: Colors.red
+            ),
+            gravity: ToastGravity.TOP
         );
         Navigator.pushNamed(context, AppRoutes.login);
       }else if(response.statusCode == 404 ) {
-        Map<String, dynamic> errors = jsonDecode(response.body);
-        print(errors);
-        ScaffoldMessenger.of(context).showSnackBar(
-            CustomSnackBar(content: Text(
-                errors.containsKey('detail') ? errors['detail'] :
-                'Une erreur est survenue !'
-            ), backgroundColor: Colors.red)
+        Map<String, dynamic> errors = decodedResponse;
+        fToast.showToast(
+            child: CustomToast(
+              message: errors.containsKey('detail') ? errors['detail'] :
+              'Une erreur est survenue !',
+              backgroundColor: Colors.red
+            ),
+            gravity: ToastGravity.TOP
         );
       }else {
-        Map<String, dynamic> errors = jsonDecode(response.body);
-        print(errors);
-        ScaffoldMessenger.of(context).showSnackBar(
-            CustomSnackBar(content: Text(
-                'Veuiller ressayer plus tard !'
-            ), backgroundColor: Colors.red)
+        Map<String, dynamic> errors = decodedResponse;
+        fToast.showToast(
+            child: CustomToast(
+              message: 'Veuiller ressayer plus tard !',
+              backgroundColor: Colors.red
+            ),
+            gravity: ToastGravity.TOP
         );
       }
     }catch( e ){
-      print(e);
-      ScaffoldMessenger.of(context).showSnackBar(
-          CustomSnackBar(content: Text('Erreur $e'), backgroundColor: Colors.red)
+      fToast.showToast(
+          child: CustomToast(
+            message: 'Erreur $e',
+            backgroundColor: Colors.red
+          ),
+          gravity: ToastGravity.TOP
       );
     }
     return null;

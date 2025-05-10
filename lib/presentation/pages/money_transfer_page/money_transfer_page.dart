@@ -74,25 +74,25 @@ class _MoneyTransferPageState extends State<MoneyTransferPage> {
   final List<GridSelectableItem> _paymentMethods = [
     GridSelectableItem(
       text: 'Orange Money',
-      asset: 'assets/images/orange-money.png',
+      asset: 'assets/images/wbg/orange-money.png',
       leadingIcon: Image.asset('assets/images/orange-money.png', width: 200, height: 50),
       trailingIcon: null
     ),
     GridSelectableItem(
       text: 'GoPay',
-      asset: 'assets/images/gopay.png',
+      asset: 'assets/images/wbg/gopay.png',
       leadingIcon: Image.asset('assets/images/gopay.png', width: 200, height: 50),
       trailingIcon: null
     ),
     GridSelectableItem(
       text: 'Wave',
-      asset: 'assets/images/wave.png',
+      asset: 'assets/images/wbg/wave.png',
       leadingIcon: Image.asset('assets/images/wave.png', width: 200, height: 50),
       trailingIcon: null
     ),
     GridSelectableItem(
       text: 'CashPickup',
-      asset: 'assets/images/cash-pickup.png',
+      asset: 'assets/images/wbg/cash-pickup.png',
       leadingIcon: Image.asset('assets/images/cash-pickup.png', width: 200, height: 50),
       trailingIcon: null
     ),
@@ -120,14 +120,14 @@ class _MoneyTransferPageState extends State<MoneyTransferPage> {
 
   Future<void> _handleAmountSendChange() async {
     if (_amountSendController.text.isNotEmpty) {
-      await _getTargetCurrency(double.tryParse(_amountSendController.text) ?? 0);
+      await _getTargetCurrency(_amountSendController.text);
       // Autres traitements nécessaires...
     }
   }
 
   Future<void> _handleAmountReceiveChange() async {
     if (_amountReceiveController.text.isNotEmpty) {
-      await _getTargetCurrency(double.tryParse(_amountReceiveController.text) ?? 0);
+      await _getTargetCurrency(_amountReceiveController.text);
       // Autres traitements nécessaires...
     }
   }
@@ -172,6 +172,7 @@ class _MoneyTransferPageState extends State<MoneyTransferPage> {
           destinataires.addAll(loadedDestinataires);
           contactToRole.addAll(loadedcontactToRole);
           _isLoadingDestinataires = false;
+          _selectedContact = destinataires.last;
         });
       }
     } catch (e) {
@@ -191,19 +192,23 @@ class _MoneyTransferPageState extends State<MoneyTransferPage> {
   String _targetCurrency = '';
   bool _targetCurrencyLoader = false;
 
-  Future<void> _getTargetCurrency(double amount) async {
+  Future<void> _getTargetCurrency(String amountStr) async {
+    double amount = amountStr.split(" ").length > 1 ? double.tryParse(amountStr.split(" ")[0]) ?? 0 : double.tryParse(amountStr) ?? 0;
     if (_selectedContact.isNotEmpty) {
       setState(() {
         _targetCurrencyLoader = true;
         _isLoading = true;
       });
 
+      String userCurrency = await UserRepository.getCurrencyInSharedPreferences();
+      String userCountry = await UserRepository.getCountryInSharedPreferences();
+
       Role role = contactToRole[_selectedContact]!;
       Map<String, dynamic>? rs = await RoleRepository.getXRate(
         role.telephone,
-        await UserRepository.getCurrencyInSharedPreferences(),
+        userCurrency,
         role.countryCurrency,
-        await UserRepository.getCountryInSharedPreferences(),
+        userCountry,
         role.country,
         amount,
         context,
@@ -218,6 +223,16 @@ class _MoneyTransferPageState extends State<MoneyTransferPage> {
 
       print(rs);
 
+      setState(() {
+        data = rs;
+        _amountSendController.text = '${data['amount']} ${data['currency']}';
+        _amountReceiveController.text = '${data['amount'] * data['ratio']} ${role.countryCurrency}';
+        _rateController.text = "Taux de change 1.00 ${userCurrency} = ${data['ratio']} ${role.countryCurrency}";
+        _feesController.text = '${data['total_fee']}';
+        _totalController.text = '${data['total_amount']} ${userCurrency}';
+        _targetCurrencyLoader = false;
+        _isLoading = false;
+      });
       /*setState(() {
         data = rs;
         destinataire = d;
@@ -242,31 +257,55 @@ class _MoneyTransferPageState extends State<MoneyTransferPage> {
         _isSending = true;
       });
 
-      User user = (await UserRepository.getUserInSharedPreferences());
-      if( user == null || role == null ) return;
+      if( role == null ) {
+        fToast.showToast(
+            child: CustomToast(
+              message: 'Destinataire non selectionné!',
+              textColor: Colors.white,
+              backgroundColor: Colors.yellow[800]!.withOpacity(1),
+            ),
+            gravity: ToastGravity.TOP
+        );
+        if (mounted) {
+          setState(() {
+            _isSending = false;
+          });
+        }
+      }
 
-      print(user);
+      String senderCurrency = await UserRepository.getCurrencyInSharedPreferences();
+      String senderCountry = await UserRepository.getCountryInSharedPreferences();
 
       bool rs = await RemittanceRepository.create(
-        Remittance(
-          transactionId: '',
-          sender: user.id ?? 0,
-          role: role!.id ?? 0,
-          cashoutLocation: 'Guinea',
-          payoutOption: _selectedPaymentMethod,
-          amountSent: double.tryParse(_amountSendController.text) ?? 0,
-          senderCurrency: user.currency ?? '',
-          exchangeRate: 1000,
-          recipientAmount: double.tryParse(_amountReceiveController.text) ?? 0,
-          agentProfit: 0,
-          fees: double.tryParse(_feesController.text) ?? 0,
-          total: double.tryParse(_totalController.text) ?? 0,
-          status: 'REQUESTED'
-        ),
+          Remittance(
+            transactionId: '', // Génère un ID unique basé sur le timestamp
+            senderId: 0,
+            roleId: role!.id ?? 0,
+            cashoutLocation: role!.country,
+            payoutOption: _selectedPaymentMethod,
+            amountSent: double.tryParse(_amountSendController.text) ?? 0,
+            senderCurrency: senderCurrency,
+            exchangeRate: data['ratio'],
+            recipientAmount: double.tryParse(_amountReceiveController.text) ?? 0,
+            recipientCurrency: role!.countryCurrency, // Devise du bénéficiaire (Guinée)
+            agentProfit: 0,
+            fees: double.tryParse(_feesController.text) ?? 0,
+            total: double.tryParse(_totalController.text) ?? 0,
+            status: 'REQUESTED',
+            transactionCompletionDate: null, // À compléter quand la transaction est terminée
+            agentStartUsername: null, // Nom d'utilisateur de l'agent qui initie
+            agentCompletionUsername: null, // À compléter à la fin de la transaction
+            comments: null,
+            partnerCode: null, // Code partenaire si applicable
+            createdAt: null, // Date de création maintenant
+            updatedAt: null, // Date de mise à jour maintenant
+            remittanceUuid: '', // Génère un UUID v4 unique
+          ),
         context
       );
-      if( rs )
+      if( rs ){
         _showSuccessDialog();
+      }
 
       if (mounted) {
         setState(() {
@@ -298,7 +337,13 @@ class _MoneyTransferPageState extends State<MoneyTransferPage> {
           }
           setState(() {
             _selectedContact = list[0];
+            role = contactToRole[_selectedContact];
           });
+          if( _amountSendController.text.isNotEmpty && _amountSendController.text != '0' ){
+            _getTargetCurrency(_amountSendController.text);
+          }else if( _amountReceiveController.text.isNotEmpty && _amountReceiveController.text != '0' ){
+            _getTargetCurrency(_amountReceiveController.text);
+          }
         },
       ),
     ).showModal(context);
@@ -486,7 +531,6 @@ class _MoneyTransferPageState extends State<MoneyTransferPage> {
                                   _countryCodeController.text = phone.countryCode.replaceAll("+", "");
                                   _countryCurrencyController.text = App.AppConfig.codeToCurrency[_code]!;
                                 });
-                                print(_phoneController.text);
                               },
                             ),
                           ],
@@ -564,14 +608,14 @@ class _MoneyTransferPageState extends State<MoneyTransferPage> {
               const SizedBox(height: 16),
 
               // Titre
-              Text('Transfert Réussi!',
+              Text('Transfert Soumis!',
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
                     color: Colors.blue[800],
                   )),
               const SizedBox(height: 8),
-              Text('Votre transaction a été effectuée avec succès',
+              Text('Votre transaction a été soumis avec succès',
                   style: TextStyle(
                     color: Colors.grey[600],
                     fontSize: 14,
@@ -747,7 +791,7 @@ class _MoneyTransferPageState extends State<MoneyTransferPage> {
                       colorScheme: colorScheme,
                     ),
                   ),
-                  SizedBox(width: 16), // <-- Ajoute un espacement ici
+                  SizedBox(width: 2*AppDimensions.smallPadding),
                   Expanded(
                     child: _buildAmountSection(
                       controller: _amountReceiveController,
@@ -760,7 +804,7 @@ class _MoneyTransferPageState extends State<MoneyTransferPage> {
                 ],
               ),
 
-              SizedBox(height: 16),
+              SizedBox(height: 2*AppDimensions.smallPadding),
 
               // Section Taux de change
               Center(
@@ -781,6 +825,7 @@ class _MoneyTransferPageState extends State<MoneyTransferPage> {
                         style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                       ),
                     )),
+                    SizedBox(width: 2*AppDimensions.smallPadding),
                     Expanded(child: CustomTextFormField(controller: _totalController,))
                   ],
                 ),
