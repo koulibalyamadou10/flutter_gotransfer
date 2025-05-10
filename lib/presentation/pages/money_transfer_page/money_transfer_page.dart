@@ -280,7 +280,7 @@ class _MoneyTransferPageState extends State<MoneyTransferPage> {
           Remittance(
             transactionId: '', // Génère un ID unique basé sur le timestamp
             senderId: 0,
-            roleId: role!.id ?? 0,
+            roleId: role!.id,
             cashoutLocation: role!.country,
             payoutOption: _selectedPaymentMethod,
             amountSent: double.tryParse(_amountSendController.text) ?? 0,

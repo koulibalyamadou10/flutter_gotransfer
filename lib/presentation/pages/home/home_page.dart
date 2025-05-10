@@ -81,13 +81,13 @@ class _HomePageState extends State<HomePage> {
             itemLabel: 'Accueil',
           ),
           BottomBarItem(
-            inActiveItem: FaIcon(
-              FontAwesomeIcons.moneyBillTransfer,
+            inActiveItem: Icon(
+              Icons.send,
               color: Colors.white,
               size: AppDimensions.bottomNavigationBarInactiveIconSize,
             ),
-            activeItem: FaIcon(
-              FontAwesomeIcons.moneyBillTransfer,
+            activeItem: Icon(
+              Icons.send,
               color: Colors.white,
               size: AppDimensions.bottomNavigationBarActiveIconSize,
             ),
@@ -95,7 +95,7 @@ class _HomePageState extends State<HomePage> {
           ),
           BottomBarItem(
             inActiveItem: Icon(
-              Icons.credit_card_outlined,
+              Icons.phone,
               color: Colors.white,
               size: AppDimensions.bottomNavigationBarInactiveIconSize,
             ),

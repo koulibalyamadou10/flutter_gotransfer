@@ -8,6 +8,7 @@ import 'package:flutter_vector_icons/flutter_vector_icons.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:gotransfer/core/utils/helpers.dart';
 import 'package:gotransfer/data/models/topup_model.dart';
+import 'package:gotransfer/data/models/role_model.dart';
 import 'package:gotransfer/data/models/user_model.dart';
 import 'package:gotransfer/data/repositories/user_repository.dart';
 import 'package:gotransfer/widgets/buttons/custom_button.dart';
@@ -49,6 +50,7 @@ class _DigitalPaymentsPageState extends State<DigitalPaymentsPage> {
     _loadDestinataires();
     fToast.init(context);
 
+
     // Écouteur pour le champ "Montant"
     _focusNodeAmountController.addListener(() {
       if (!_focusNodeAmountController.hasFocus) {
@@ -81,11 +83,12 @@ class _DigitalPaymentsPageState extends State<DigitalPaymentsPage> {
     }
 
     try {
-      User user = await UserRepository.getUserInSharedPreferences();
+      List<dynamic> roles = await UserRepository.getRolesInSharedPreferences();
       List<String> loadedDestinataires = [];
 
-      for (var destinataire in user.roles) {
-        //loadedDestinataires.add('${destinataire.first_name} ${destinataire.last_name} ${destinataire.phone_number}');
+      for (var role in roles) {
+        Role d = Role.fromJson(role);
+        loadedDestinataires.add('${d.firstName} ${d.lastName} ${d.telephone}');
       }
 
       if (mounted) {
@@ -93,7 +96,9 @@ class _DigitalPaymentsPageState extends State<DigitalPaymentsPage> {
           destinataires.clear();
           destinataires.addAll(loadedDestinataires);
           _isLoadingDestinataires = false;
-          _isLoading = false;
+          if (destinataires.isNotEmpty) {
+            _selectedContact = destinataires.last;
+          }
         });
       }
     } catch (e) {
@@ -101,9 +106,12 @@ class _DigitalPaymentsPageState extends State<DigitalPaymentsPage> {
       if (mounted) {
         setState(() {
           _isLoadingDestinataires = false;
-          _isLoading = false;
         });
       }
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
     }
   }
 

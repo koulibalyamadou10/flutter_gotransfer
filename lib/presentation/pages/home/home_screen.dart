@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:gotransfer/constants/dimensions.dart';
 import 'package:gotransfer/data/repositories/user_repository.dart';
 import 'package:gotransfer/presentation/widgets/drawer/drawer_layout.dart';
 import 'package:gotransfer/routes/app_routes.dart';
@@ -302,12 +303,19 @@ class _HomeScreenState extends State<HomeScreen> {
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      Text(
-                        'Voir tout',
-                        style: TextStyle(
-                          color: colorScheme.primary,
-                          fontSize: 14,
+                      TextButton(
+                        child: Text(
+                          'Voir tout',
+                          style: TextStyle(
+                            color: colorScheme.primary,
+                            fontSize: 14,
+                          ),
                         ),
+                        onPressed: (){
+                          Navigator.pushNamed(context, AppRoutes.historique, arguments: {
+                            'remittances' : user.remittances_requested
+                          });
+                        },
                       ),
                     ],
                   ),
@@ -380,9 +388,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     ],
                   ),
                 ),
-
-                // Transactions historiques
-
 
                 // Liste des transactions historiques
                 Container(
@@ -489,7 +494,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final (textColor, amountColor, statusColor) = _getColorsForStatus(remittance.status, colorScheme);
 
     // Formatage des montants
-    final amountSent = '${remittance.amountSent.toStringAsFixed(2)} ${remittance.senderCurrency}';
+    final totalAmountSent = '${remittance.amountSent.toStringAsFixed(2)} ${remittance.senderCurrency}';
     final recipientAmount = '${remittance.recipientAmount.toStringAsFixed(2)} ${remittance.recipientCurrency}';
 
     return Padding(
@@ -511,40 +516,6 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Ligne supérieure avec statut et montant
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  // Badge de statut
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: statusColor.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: statusColor.withOpacity(0.3), width: 1),
-                    ),
-                    child: Text(
-                      remittance.status.toUpperCase(),
-                      style: TextStyle(
-                        color: statusColor,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                  ),
-
-                  // Montant principal
-                  Text(
-                    '${remittance.total}',
-                    style: TextStyle(
-                      color: amountColor,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
 
               const SizedBox(height: 16),
 
@@ -572,20 +543,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Expéditeur
-                        Text(
-                          'Expéditeur: #${remittance.senderId}',
-                          style: TextStyle(
-                            color: colorScheme.onSurface.withOpacity(0.8),
-                            fontSize: 13,
-                          ),
-                        ),
-
-                        const SizedBox(height: 4),
-
                         // Bénéficiaire
                         Text(
-                          'Bénéficiaire: #${remittance.roleId}',
+                          '${remittance.roleInfo}',
                           style: TextStyle(
                             color: colorScheme.onSurface.withOpacity(0.8),
                             fontSize: 13,
@@ -617,7 +577,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Text(
-                        '→ $recipientAmount',
+                        '→ $totalAmountSent',
                         style: TextStyle(
                           color: colorScheme.onSurface,
                           fontSize: 14,
@@ -626,20 +586,13 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Taux: ${remittance.exchangeRate.toStringAsFixed(2)}',
+                        '${recipientAmount}',
                         style: TextStyle(
                           color: colorScheme.onSurface.withOpacity(0.6),
                           fontSize: 11,
                         ),
                       ),
                       const SizedBox(height: 4),
-                      Text(
-                        'Frais: ${remittance.fees?.toStringAsFixed(2) ?? '0.00'}',
-                        style: TextStyle(
-                          color: colorScheme.error,
-                          fontSize: 11,
-                        ),
-                      ),
                     ],
                   ),
                 ],
@@ -650,21 +603,29 @@ class _HomeScreenState extends State<HomeScreen> {
               Divider(height: 1, color: colorScheme.onSurface.withOpacity(0.1)),
               const SizedBox(height: 8),
 
+              // Ligne inferieur avec statut et montant
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    'ID: ${remittance.transactionId}',
-                    style: TextStyle(
-                      color: colorScheme.onSurface.withOpacity(0.5),
-                      fontSize: 10,
+                  // Montant principal
+                  Text(''),
+
+                  // Badge de statut
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: statusColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: statusColor.withOpacity(0.3), width: 1),
                     ),
-                  ),
-                  Text(
-                    'Créé le: ${DateFormat('dd/MM/yyyy HH:mm').format(remittance.createdAt ?? DateTime.now())}',
-                    style: TextStyle(
-                      color: colorScheme.onSurface.withOpacity(0.5),
-                      fontSize: 10,
+                    child: Text(
+                      remittance.status.toUpperCase(),
+                      style: TextStyle(
+                        color: statusColor,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.5,
+                      ),
                     ),
                   ),
                 ],
@@ -949,7 +910,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     // Détermine si c'est un envoi ou réception
     final isOutgoing = remittance.amountSent > 0;
-    final amountText = '${isOutgoing ? '-' : '+'}${remittance.amountSent.abs().toStringAsFixed(2)} ${remittance.senderCurrency}';
+    final amountTotal = remittance.total;
 
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 8.0),
@@ -975,18 +936,15 @@ class _HomeScreenState extends State<HomeScreen> {
               children: [
                 // Icône avec fond coloré
                 Container(
-                  width: 48,
-                  height: 48,
+                  padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
+                    color: colorScheme.primary.withOpacity(0.1),
                     shape: BoxShape.circle,
-                    color: iconColor.withOpacity(0.1),
                   ),
-                  child: Center(
-                    child: Icon(
-                      icon,
-                      color: iconColor,
-                      size: 24,
-                    ),
+                  child: Icon(
+                    Icons.compare_arrows,
+                    color: colorScheme.primary,
+                    size: 20,
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -1008,14 +966,6 @@ class _HomeScreenState extends State<HomeScreen> {
                               fontWeight: FontWeight.w600,
                             ),
                           ),
-                          Text(
-                            amountText,
-                            style: TextStyle(
-                              color: isOutgoing ? colorScheme.error : colorScheme.primary,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
                         ],
                       ),
                       const SizedBox(height: 4),
@@ -1030,26 +980,19 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                           const SizedBox(width: 4),
                           Text(
-                            'Bénéf. #${remittance.roleId}',
+                            '${remittance.roleInfo}',
                             style: TextStyle(
                               color: colorScheme.onSurface.withOpacity(0.6),
                               fontSize: 13,
                             ),
                           ),
-                          const SizedBox(width: 12),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: _getStatusColor(remittance.status).withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              remittance.status.toUpperCase(),
-                              style: TextStyle(
-                                color: _getStatusColor(remittance.status),
-                                fontSize: 11,
-                                fontWeight: FontWeight.w500,
-                              ),
+                          const Spacer(),
+                          Text(
+                            '${amountTotal} ${remittance.senderCurrency}',
+                            style: TextStyle(
+                              color: isOutgoing ? colorScheme.error : colorScheme.primary,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                         ],
@@ -1072,16 +1015,32 @@ class _HomeScreenState extends State<HomeScreen> {
                               fontSize: 12,
                             ),
                           ),
-                          const Spacer(),
-                          Text(
-                            'ID: ${remittance.transactionId.substring(0, 6)}...',
-                            style: TextStyle(
-                              color: colorScheme.onSurface.withOpacity(0.4),
-                              fontSize: 11,
+                        ],
+                      ),
+
+                      SizedBox(height: AppDimensions.smallPadding),
+
+                      // pour le status
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: _getStatusColor(remittance.status).withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              remittance.status.toUpperCase(),
+                              style: TextStyle(
+                                color: _getStatusColor(remittance.status),
+                                fontSize: 11,
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
                           ),
                         ],
-                      ),
+                      )
                     ],
                   ),
                 ),
@@ -1095,16 +1054,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
 // Fonction pour obtenir l'icône, la couleur et le nom de catégorie
   (IconData, Color, String) _getIconAndCategoryForRemittance(Remittance remittance) {
-    switch (remittance.payoutOption.toLowerCase()) {
-      case 'mobile money':
-        return (Icons.phone_android, Colors.purple, 'Mobile Money');
-      case 'cash':
-        return (Icons.money, Colors.green, 'Retrait Cash');
-      case 'bank transfer':
-        return (Icons.account_balance, Colors.blue, 'Virement Bancaire');
-      default:
-        return (Icons.compare_arrows, Colors.orange, 'Transfert');
-    }
+      return (Icons.compare_arrows, Colors.orange, 'Transfert');
   }
 
 // Fonction pour obtenir la couleur du statut

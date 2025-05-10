@@ -3,7 +3,8 @@ import 'dart:convert';
 class Remittance {
   final String transactionId;
   final int? senderId;
-  final int? roleId;
+  final int roleId;
+  final String? roleInfo;
   final String cashoutLocation;
   final String payoutOption;
   final double amountSent;
@@ -27,7 +28,8 @@ class Remittance {
   Remittance({
     required this.transactionId,
     this.senderId,
-    this.roleId,
+    required this.roleId,
+    this.roleInfo,
     required this.cashoutLocation,
     required this.payoutOption,
     required this.amountSent,
@@ -53,7 +55,8 @@ class Remittance {
     return Remittance(
       transactionId: json['transaction_id'],
       senderId: json['sender'],
-      roleId: json['role'],
+      roleId: json['role'] ?? 0,
+      roleInfo: json['role_info'],
       cashoutLocation: json['cashout_location'],
       payoutOption: json['payout_option'],
       amountSent: double.parse(json['amount_sent'].toString()),
@@ -91,8 +94,8 @@ class Remittance {
   Map<String, dynamic> toJson() {
     return {
       'transaction_id': transactionId,
-      'sender_id': senderId,
-      'role_id': roleId,
+      'sender': senderId,
+      'role': roleId,
       'cashout_location': cashoutLocation,
       'payout_option': payoutOption,
       'amount_sent': amountSent,
