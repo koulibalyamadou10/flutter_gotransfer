@@ -6,6 +6,7 @@ import 'package:flutter_native_contact_picker/flutter_native_contact_picker.dart
 import 'package:flutter_native_contact_picker/model/contact.dart';
 import 'package:flutter_vector_icons/flutter_vector_icons.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:gotransfer/constants/dimensions.dart';
 import 'package:gotransfer/core/utils/helpers.dart';
 import 'package:gotransfer/data/models/topup_model.dart';
 import 'package:gotransfer/data/models/role_model.dart';
@@ -34,6 +35,7 @@ class _DigitalPaymentsPageState extends State<DigitalPaymentsPage> {
   final FocusNode _focusNodeAmountController = FocusNode();
   String _selectedProduct = '';
   Map<int, dynamic> productMapID = {};
+  int? _selectedProductId;
   bool _isProcessing = false;
   bool _isLoading = true;
   UniqueKey containerButtonKey = UniqueKey();
@@ -43,6 +45,7 @@ class _DigitalPaymentsPageState extends State<DigitalPaymentsPage> {
   final List<String> _products = [];
   String _selectedContact = '';
   final List<String> destinataires = [];
+  Map<String, Role> contactToRole = {};
 
   @override
   void initState() {
@@ -85,16 +88,21 @@ class _DigitalPaymentsPageState extends State<DigitalPaymentsPage> {
     try {
       List<dynamic> roles = await UserRepository.getRolesInSharedPreferences();
       List<String> loadedDestinataires = [];
+      Map<String, Role> loadedContactToRole = {};
 
       for (var role in roles) {
         Role d = Role.fromJson(role);
-        loadedDestinataires.add('${d.firstName} ${d.lastName} ${d.telephone}');
+        String contactKey = '${d.firstName} ${d.lastName} ${d.telephone}';
+        loadedDestinataires.add(contactKey);
+        loadedContactToRole[contactKey] = d;
       }
 
       if (mounted) {
         setState(() {
           destinataires.clear();
+          contactToRole.clear();
           destinataires.addAll(loadedDestinataires);
+          contactToRole.addAll(loadedContactToRole);
           _isLoadingDestinataires = false;
           if (destinataires.isNotEmpty) {
             _selectedContact = destinataires.last;
@@ -144,9 +152,20 @@ class _DigitalPaymentsPageState extends State<DigitalPaymentsPage> {
           }
           setState(() {
             _selectedProduct = list[0];
+            // Trouver l'ID du produit sélectionné
+            _selectedProductId = productMapID.entries
+                .firstWhere((entry) => entry.value['name'] == _selectedProduct)
+                .key;
+            // Mettre à jour le montant
+            if (_selectedProductId != null) {
+              var productData = productMapID[_selectedProductId];
+              if (productData != null && productData['retail'] != null) {
+                _amountController.text = '${productData['retail']['amount'].toString()} ${productData['retail']['unit'].toString()}';
+              }
+            }
           });
-          // Calculer le montant ici pour l'afficher
 
+          print('ID du produit sélectionné: $_selectedProductId');
         },
       ),
     ).showModal(context);
@@ -161,8 +180,10 @@ class _DigitalPaymentsPageState extends State<DigitalPaymentsPage> {
     });
 
     try {
-      String? phoneNumber = Helpers.getNumberAndNameUser(_selectedContact)?['phone_number'];
-      if (phoneNumber == null) return;
+      Role? selectedRole = contactToRole[_selectedContact];
+      if (selectedRole == null) return;
+      String phoneNumber = selectedRole.telephone;
+      print('Téléphone sélectionné: $phoneNumber');
 
       List<dynamic>? products = await TopupRepository.getAvailableProducts(
           {'phone_number': phoneNumber},
@@ -177,7 +198,8 @@ class _DigitalPaymentsPageState extends State<DigitalPaymentsPage> {
           int id = product['id'];
           dynamic data = {
             'name': name,
-            'retail': product['retail']
+            'retail': product['prices']['retail'],
+            'wholesale': product['prices']['wholesale']
           };
 
           map[id] = data;
@@ -374,21 +396,45 @@ class _DigitalPaymentsPageState extends State<DigitalPaymentsPage> {
         String? phoneNumber = Helpers.getNumberAndNameUser(_selectedContact)?['phone_number'];
         if (phoneNumber == null) return;
 
-        String productId = _selectedProduct.split(' ').last;
-        double amount = double.tryParse(_amountController.text) ?? 0;
+        if (_selectedProductId == null) return;
 
-        // bool success = await TopupRepository.processTopup(
-        //     {
-        //       'phone_number': phoneNumber,
-        //       'product_id': productId,
-        //       'amount': amount,
-        //     },
-        //     context
-        // );
-        //
-        // if (success) {
-        //   _showSuccessDialog();
-        // }
+        Map<String, dynamic> data_to_transaction = {
+          "product_id": _selectedProductId,
+          "auto_confirm": true,
+          "credit_party_identifier": {
+            "mobile_number": phoneNumber,
+          }
+        };
+
+        bool success = await TopupRepository.create(
+            Topup(
+              transactionId: '',
+              user: 0, // ID de l'utilisateur actuel
+              role: , // ID du rôle/beneficiaire
+              recipientNumber: phoneNumberController.text, // Numéro à recharger
+              operator: selectedOperator, // Opérateur mobile (ex: 'Orange', 'MTN')
+              product: selectedProduct, // Type de recharge (ex: '1000 FCFA')
+              price: double.parse(amountController.text), // Montant de la recharge
+              sellingPrice: double.parse(amountController.text) * 1.05, // Prix de vente avec marge
+              currency: 'XOF', // Devise du prix
+              sellingCurrency: 'XOF', // Devise de vente
+              profit: double.parse(amountController.text) * 0.05, // Marge bénéficiaire (5%)
+              agentProfit: double.parse(amountController.text) * 0.02, // Commission agent (2%)
+              status: 'PENDING', // Statut initial
+              senderFirstName: currentUser.firstName,
+              senderLastName: currentUser.lastName,
+              senderTelephone: currentUser.phoneNumber,
+              agentUsername: currentUser.username, // Optionnel
+              topupUuid: const Uuid().v4(), // Générer un UUID unique
+              createdAt: DateTime.now(),
+              updatedAt: DateTime.now(),
+            ),
+            context
+        );
+
+        if (success) {
+          _showSuccessDialog();
+        }
       } catch (e) {
         print('Erreur lors de la recharge: $e');
         fToast.showToast(
@@ -656,11 +702,20 @@ class _DigitalPaymentsPageState extends State<DigitalPaymentsPage> {
             children: [
               Expanded(flex:1, child: Center(
                 child: Text(
-                  'Montant à Récharger',
+                  'Montant à Payer',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
               )),
-              Expanded(child: CustomTextFormField(controller: _amountController,))
+              SizedBox(width: AppDimensions.smallPadding),
+              Expanded(child: CustomTextFormField(
+            controller: _amountController,
+            keyboardType: TextInputType.number,
+            focusNode: _focusNodeAmountController,
+            enabled: false,
+            readOnly: true,
+            filled: true,
+            fillColor: Colors.grey[200],
+          ))
             ],
           ),
         ),
@@ -698,7 +753,7 @@ class _DigitalPaymentsPageState extends State<DigitalPaymentsPage> {
                 _isProcessing
                     ? CustomLoader()
                     : CustomButton(
-                  text: 'Confirmer la recharge',
+                  text: 'Envoyer',
                   onTap: _submitRecharge,
                   isFullWidth: true,
                   backgroundColor: colorScheme.primary,

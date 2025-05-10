@@ -16,6 +16,7 @@ class ProfilePage extends StatefulWidget {
 
 class _ProfilePageState extends State<ProfilePage> {
   late ColorScheme colorScheme;
+  bool _isLoading = true;
   late User user;
 
   @override
@@ -25,6 +26,7 @@ class _ProfilePageState extends State<ProfilePage> {
     UserRepository.getUserInSharedPreferences().then((userReference) {
       setState(() {
         user = userReference;
+        _isLoading = false;
       });
     });
   }
@@ -35,7 +37,9 @@ class _ProfilePageState extends State<ProfilePage> {
     colorScheme = theme.colorScheme;
     return Scaffold(
       backgroundColor: colorScheme.background,
-      body: SingleChildScrollView(
+      body: _isLoading ?
+          Center(child: CircularProgressIndicator()) :
+      SingleChildScrollView(
         child: Column(
           children: [
             // Header avec photo de profil
