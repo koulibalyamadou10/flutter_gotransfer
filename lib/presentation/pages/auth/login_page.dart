@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 
 import '../../../core/utils/helpers.dart';
 import '../../../data/models/user_model.dart';
 import '../../../data/repositories/user_repository.dart';
 import '../../../routes/app_routes.dart';
+import '../../../widgets/components/custom_toast.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -26,6 +28,7 @@ class _LoginPageState extends State<LoginPage> {
   bool _obscurePassword = true;
 
   late ColorScheme colorScheme;
+  final FToast fToast = FToast();
 
   @override
   void initState() {
@@ -36,6 +39,7 @@ class _LoginPageState extends State<LoginPage> {
     UserRepository.getUserPasswordHashed().then((onValue){
       _passwordController.text = Helpers.decrypt(onValue);
     });
+    fToast.init(context);
   }
 
   @override
@@ -54,22 +58,25 @@ class _LoginPageState extends State<LoginPage> {
       try {
         await UserRepository.login(
           User(
-              first_name: '',
-              last_name: '',
+              firstName: '',
+              lastName: '',
               email: _emailController.text,
-              phone_number: '',
+              phoneNumber: '',
               address: '',
               password: _passwordController.text
           ),
           context,
+          fToast,
           isSavedSession: _rememberMe,
         );
       } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Erreur de connexion: $e'),
-            backgroundColor: const Color(0xFF6200EE),
-          ),
+        fToast.showToast(
+            child: CustomToast(
+              message: 'Erreur de connexion: $e',
+              textColor: Colors.white,
+              backgroundColor: Colors.red,
+            ),
+            gravity: ToastGravity.TOP
         );
       } finally {
         if (mounted) {
@@ -85,6 +92,7 @@ class _LoginPageState extends State<LoginPage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     colorScheme = theme.colorScheme;
+    final FToast fToast = FToast();
 
     final arguments = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>? ?? {};
     final email = arguments['email'] ?? '';

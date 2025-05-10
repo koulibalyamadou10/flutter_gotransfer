@@ -3,7 +3,9 @@ import 'package:gotransfer/data/repositories/user_repository.dart';
 import 'package:gotransfer/presentation/widgets/drawer/drawer_layout.dart';
 import 'package:gotransfer/routes/app_routes.dart';
 
+import '../../../data/models/remittance_model.dart';
 import '../../../data/models/user_model.dart';
+import '../../../widgets/components/skeleton_loader.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -16,10 +18,10 @@ class _HomeScreenState extends State<HomeScreen> {
   late ColorScheme colorScheme;
   bool _isLoading = true;
   User user = User(
-    first_name: '',
-    last_name: '',
+    firstName: '',
+    lastName: '',
     email: '',
-    phone_number: '',
+    phoneNumber: '',
     address: '',
     password: '',
     image: ''
@@ -46,7 +48,8 @@ class _HomeScreenState extends State<HomeScreen> {
       drawer: DrawerLayoute(),
       backgroundColor: colorScheme.background,
       body: SafeArea(
-        child: _isLoading ? Center(child: CircularProgressIndicator(color: colorScheme.primary)) :
+        child: _isLoading ?
+        _buildSkeletonLoader(context) :
         SingleChildScrollView(
           physics: const BouncingScrollPhysics(),
           child: Padding(
@@ -111,7 +114,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   top: 5,
                                   width: 150,
                                   height: 20,
-                                  child: Text("${user.last_name} ${user.first_name}", style: TextStyle(fontSize: 16),),
+                                  child: Text("${user.firstName}", style: TextStyle(fontSize: 16),),
                                 ),
                                 Positioned(
                                   left: 0,
@@ -175,8 +178,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                         ),
                                         child: Center(
                                           child: Text(
-                                            user.first_name.isEmpty ? '' :
-                                            '${user.first_name[0].toUpperCase()}${user.last_name[0].toUpperCase()}',
+                                            user.firstName.isEmpty ? '' :
+                                            '${user.firstName[0].toUpperCase()}${user.lastName[0].toUpperCase()}',
                                             style: TextStyle(
                                               color: Colors.white,
                                               fontWeight: FontWeight.bold,
@@ -190,7 +193,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
                                           Text(
-                                            '${user.last_name} ${user.first_name}',
+                                            '${user.firstName} ${user.lastName}',
                                             style: TextStyle(
                                               color: Colors.white,
                                               fontSize: 18,
@@ -233,7 +236,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   Row(
                                     children: [
                                       Text(
-                                        'GNF',
+                                        '${user.isLoaded ? user.currency : ''}',
                                         style: TextStyle(
                                           color: Colors.white.withOpacity(0.8),
                                           fontSize: 16,
@@ -286,7 +289,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
                 // Section Today
                 Padding(
-                  padding: const EdgeInsets.only(top: 16.0, bottom: 8.0),
+                  padding: const EdgeInsets.only(top: 10.0, bottom: 8.0),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -310,30 +313,46 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
 
                 // Transactions du jour
-                _buildTransactionItem(
-                  avatarText: 'BS',
-                  name: 'Bakhtyar Sattarov',
-                  cardType: 'Sent',
-                  paymentMethod: 'Mastercard',
-                  last4: '6789',
-                  amount: '-\$246.00',
-                  textColor: colorScheme.onBackground,
-                  secondaryTextColor: colorScheme.onBackground,
-                  amountColor: Colors.red,
-                ),
+                ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: user.isLoaded
+                      ? user.remittances_today.isEmpty
+                      ? 1 // Pour le message vide
+                      : user.remittances_today.length
+                      : 1, // Pour le loading
+                  itemBuilder: (context, index) {
+                    if (!user.isLoaded) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+                    if (user.remittances_today.isEmpty) {
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8.0),
+                        child: Text(
+                          'Aucune transaction aujourd\'hui',
+                          style: TextStyle(
+                            color: colorScheme.onBackground.withOpacity(0.5),
+                          ),
+                        ),
+                      );
+                    }
 
-                Divider(height: 1, color: colorScheme.onBackground.withOpacity(0.1)),
-
-                _buildTransactionItem(
-                  avatarText: 'PC',
-                  name: 'Polly Clark',
-                  cardType: 'Received',
-                  paymentMethod: 'Visa',
-                  last4: '6789',
-                  amount: '+\$975.00',
-                  textColor: colorScheme.onBackground,
-                  secondaryTextColor: colorScheme.onBackground,
-                  amountColor: Colors.green,
+                    final remittance = user.remittances_today[index];
+                    return Column(
+                      children: [
+                        _buildRemittanceItem(
+                          remittance: remittance,
+                          colorScheme: colorScheme,
+                          context: context,
+                        ),
+                        if (index < user.remittances_today.length - 1)
+                          Divider(
+                            height: 1,
+                            color: colorScheme.onBackground.withOpacity(0.1),
+                          ),
+                      ],
+                    );
+                  },
                 ),
 
                 // Section Historique des Transactions
@@ -351,7 +370,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ),
                       Text(
-                        'Tout voir',
+                        'voir tout',
                         style: TextStyle(
                           color: colorScheme.primary,
                           fontSize: 14,
@@ -361,6 +380,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
 
+                // Transactions historiques
+
+
                 // Liste des transactions historiques
                 Container(
                   decoration: BoxDecoration(
@@ -369,55 +391,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   child: Column(
                     children: [
-                      _buildHistoryItem(
-                        icon: Icons.shopping_cart,
-                        iconColor: Colors.blue,
-                        title: 'Achat en ligne',
-                        date: '28 Juillet, 2025',
-                        amount: '-\$129.99',
-                        textColor: colorScheme.onBackground,
-                        secondaryTextColor: colorScheme.onBackground,
-                        amountColor: Colors.red,
-                      ),
-
-                      Divider(height: 1, color: colorScheme.onBackground.withOpacity(0.1), indent: 16, endIndent: 16),
-
-                      _buildHistoryItem(
-                        icon: Icons.fastfood,
-                        iconColor: Colors.orange,
-                        title: 'Restaurant',
-                        date: '27 Juillet, 2025',
-                        amount: '-\$45.50',
-                        textColor: colorScheme.onBackground,
-                        secondaryTextColor: colorScheme.onBackground,
-                        amountColor: Colors.red,
-                      ),
-
-                      Divider(height: 1, color: colorScheme.onBackground.withOpacity(0.1), indent: 16, endIndent: 16),
-
-                      _buildHistoryItem(
-                        icon: Icons.attach_money,
-                        iconColor: Colors.green,
-                        title: 'Salaire',
-                        date: '25 Juillet, 2025',
-                        amount: '+\$3,500.00',
-                        textColor: colorScheme.onBackground,
-                        secondaryTextColor: colorScheme.onBackground,
-                        amountColor: Colors.green,
-                      ),
-
-                      Divider(height: 1, color: colorScheme.onBackground.withOpacity(0.1), indent: 16, endIndent: 16),
-
-                      _buildHistoryItem(
-                        icon: Icons.home,
-                        iconColor: colorScheme.primary,
-                        title: 'Loyer',
-                        date: '20 Juillet, 2025',
-                        amount: '-\$850.00',
-                        textColor: colorScheme.onBackground,
-                        secondaryTextColor: colorScheme.onBackground,
-                        amountColor: Colors.red,
-                      ),
+                      // Utilisation dans votre UI
+                      _buildHistoryList(user.remittances_last, colorScheme),
                     ],
                   ),
                 ),
@@ -504,74 +479,174 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   // Widget pour afficher un élément de transaction
-  Widget _buildTransactionItem({
-    required String avatarText,
-    required String name,
-    required String cardType,
-    required String paymentMethod,
-    required String last4,
-    required String amount,
-    required Color textColor,
-    required Color secondaryTextColor,
-    required Color amountColor,
+  Widget _buildRemittanceItem({
+    required Remittance remittance,
+    required ColorScheme colorScheme,
+    required BuildContext context,
   }) {
+    // Détermine les couleurs en fonction du statut
+    final (textColor, amountColor, statusColor) = _getColorsForStatus(remittance.status, colorScheme);
+
+    // Formatage des montants
+    final amountSent = '${remittance.amountSent.toStringAsFixed(2)} ${remittance.senderCurrency}';
+    final recipientAmount = '${remittance.recipientAmount.toStringAsFixed(2)}';
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 12.0),
-      child: Row(
-        children: [
-          // Avatar circulaire
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: colorScheme.primary,
-            ),
-            child: Center(
-              child: Text(
-                avatarText,
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 16),
-          // Informations de la transaction
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          color: colorScheme.surfaceVariant.withOpacity(0.3),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(12.0),
+          child: Row(
             children: [
-              Text(
-                name,
-                style: TextStyle(
-                  color: textColor,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
+              // Avatar avec initiales
+              _buildRemittanceAvatar(remittance, colorScheme),
+              const SizedBox(width: 16),
+
+              // Détails de la transaction
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: statusColor.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            remittance.status.toUpperCase(),
+                            style: TextStyle(
+                              color: statusColor,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'De: User #${remittance.sender}',
+                      style: TextStyle(
+                        color: colorScheme.onSurface.withOpacity(0.7),
+                        fontSize: 12,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'À: Beneficiary #${remittance.role}',
+                      style: TextStyle(
+                        color: colorScheme.onSurface.withOpacity(0.7),
+                        fontSize: 12,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Icon(Icons.location_on_outlined, size: 14, color: colorScheme.primary),
+                        const SizedBox(width: 4),
+                        Text(
+                          remittance.cashoutLocation,
+                          style: TextStyle(
+                            color: colorScheme.onSurface.withOpacity(0.7),
+                            fontSize: 12,
+                          ),
+                        ),
+                        const Spacer(),
+                        Icon(Icons.payment_outlined, size: 14, color: colorScheme.primary),
+                        const SizedBox(width: 4),
+                        Text(
+                          remittance.payoutOption,
+                          style: TextStyle(
+                            color: colorScheme.onSurface.withOpacity(0.7),
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
-              Text(
-                '$cardType • $paymentMethod • $last4',
-                style: TextStyle(
-                  color: colorScheme.onBackground,
-                  fontSize: 12,
-                ),
+              const SizedBox(width: 16),
+
+              // Montants
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    amountSent,
+                    style: TextStyle(
+                      color: amountColor,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Text(
+                    '→ $recipientAmount',
+                    style: TextStyle(
+                      color: colorScheme.onSurface.withOpacity(0.7),
+                      fontSize: 12,
+                    ),
+                  ),
+                  Text(
+                    'Frais: ${remittance.fees.toStringAsFixed(2)}',
+                    style: TextStyle(
+                      color: colorScheme.error,
+                      fontSize: 10,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
-          const Spacer(),
-          // Montant
-          Text(
-            amount,
-            style: TextStyle(
-              color: amountColor,
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
+        ),
       ),
     );
+  }
+
+// Helper pour l'avatar
+  Widget _buildRemittanceAvatar(Remittance remittance, ColorScheme colorScheme) {
+    final initials = remittance.transactionId.substring(0, 2).toUpperCase();
+
+    return Container(
+      width: 40,
+      height: 40,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: LinearGradient(
+          colors: [
+            colorScheme.primary,
+            colorScheme.primaryContainer,
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: Center(
+        child: Text(
+          initials,
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
+    );
+  }
+
+// Helper pour les couleurs selon le statut
+  (Color, Color, Color) _getColorsForStatus(String status, ColorScheme colorScheme) {
+    return switch (status.toLowerCase()) {
+      'completed' => (colorScheme.onSurface, Colors.green, Colors.green),
+      'failed' => (colorScheme.onSurface, colorScheme.error, colorScheme.error),
+      'pending' => (colorScheme.onSurface, Colors.orange, Colors.orange),
+      _ => (colorScheme.onSurface, colorScheme.primary, colorScheme.primary),
+    };
   }
 
   void _showMoreOptions(BuildContext context) {
@@ -665,6 +740,81 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  Widget _buildSkeletonLoader(BuildContext context) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header Skeleton
+          Row(
+            children: [
+              const SkeletonLoader(width: 50, height: 50, radius: 25),
+              const SizedBox(width: 12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SkeletonLoader(width: 150, height: 16),
+                  const SizedBox(height: 8),
+                  SkeletonLoader(width: 100, height: 14),
+                ],
+              ),
+              const Spacer(),
+              SkeletonLoader(width: 24, height: 24, radius: 12),
+            ],
+          ),
+          const SizedBox(height: 24),
+
+          // Carte principale (placeholder)
+          SkeletonLoader(
+            width: double.infinity,
+            height: 180,
+            radius: 16,
+          ),
+          const SizedBox(height: 24),
+
+          // Section "Aujourd'hui"
+          SkeletonLoader(width: 100, height: 20),
+          const SizedBox(height: 16),
+          ...List.generate(3, (index) => Padding(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: SkeletonLoader(
+              width: double.infinity,
+              height: 80,
+              radius: 12,
+            ),
+          )),
+
+          // Section "Historique"
+          const SizedBox(height: 24),
+          SkeletonLoader(width: 100, height: 20),
+          const SizedBox(height: 16),
+          ...List.generate(3, (index) => Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Row(
+              children: [
+                SkeletonLoader(width: 40, height: 40, radius: 20),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SkeletonLoader(width: double.infinity, height: 16),
+                      const SizedBox(height: 8),
+                      SkeletonLoader(width: 120, height: 12),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 16),
+                SkeletonLoader(width: 80, height: 16),
+              ],
+            ),
+          )),
+        ],
+      ),
+    );
+  }
+
   void _showLogoutConfirmation(BuildContext context) {
     showDialog(
       context: context,
@@ -717,16 +867,21 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   // Widget pour afficher un élément d'historique des transactions
+// Widget pour afficher un élément d'historique des transactions
   Widget _buildHistoryItem({
-    required IconData icon,
-    required Color iconColor,
-    required String title,
-    required String date,
-    required String amount,
-    required Color textColor,
-    required Color secondaryTextColor,
-    required Color amountColor,
+    required Remittance remittance,
+    required ColorScheme colorScheme,
   }) {
+    // Détermine l'icône et la couleur en fonction du type de transaction
+    final (icon, iconColor) = _getIconForRemittance(remittance);
+
+    // Formatage de la date (vous pouvez utiliser le package intl pour un meilleur formatage)
+    final formattedDate = '22 02 2003';//DateFormat('dd MMMM, yyyy').format(DateTime.parse(remittance.));
+
+    // Détermine si c'est un crédit ou un débit
+    final isCredit = remittance.amountSent > 0;
+    final amountText = '${isCredit ? '+' : '-'}\$${remittance.amountSent.abs().toStringAsFixed(2)}';
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 2.0),
       child: Row(
@@ -749,36 +904,95 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           const SizedBox(width: 16),
           // Informations de la transaction
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: TextStyle(
-                  color: textColor,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  remittance.payoutOption,
+                  style: TextStyle(
+                    color: colorScheme.onBackground,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
-              ),
-              Text(
-                date,
-                style: TextStyle(
-                  color: colorScheme.onBackground,
-                  fontSize: 12,
+                Text(
+                  '${remittance.transactionId} • $formattedDate',
+                  style: TextStyle(
+                    color: colorScheme.onBackground.withOpacity(0.6),
+                    fontSize: 12,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-          const Spacer(),
+          const SizedBox(width: 16),
           // Montant
           Text(
-            amount,
+            amountText,
             style: TextStyle(
-              color: amountColor,
+              color: isCredit ? Colors.green : Colors.red,
               fontSize: 16,
               fontWeight: FontWeight.w600,
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+// Helper pour déterminer l'icône appropriée
+  (IconData, Color) _getIconForRemittance(Remittance remittance) {
+    if (remittance.payoutOption.toLowerCase().contains('mobile')) {
+      return (Icons.phone_iphone, Colors.blue);
+    } else if (remittance.payoutOption.toLowerCase().contains('card')) {
+      return (Icons.credit_card, Colors.purple);
+    } else if (remittance.payoutOption.toLowerCase().contains('cash')) {
+      return (Icons.money, Colors.green);
+    } else if (remittance.payoutOption.toLowerCase().contains('bank')) {
+      return (Icons.account_balance, Colors.blueAccent);
+    }
+    return (Icons.receipt, Colors.orange);
+  }
+
+// Affichage de la liste historique
+  Widget _buildHistoryList(List<Remittance> remittances, ColorScheme colorScheme) {
+    if (remittances.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8.0),
+        child: Text(
+          'Aucune transaction recentes',
+          style: TextStyle(
+            color: colorScheme.onBackground.withOpacity(0.5),
+          ),
+        ),
+      );
+    }
+
+    return Container(
+      decoration: BoxDecoration(
+        color: colorScheme.background,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        children: [
+          ...remittances.map((remittance) {
+            return Column(
+              children: [
+                _buildHistoryItem(
+                  remittance: remittance,
+                  colorScheme: colorScheme,
+                ),
+                if (remittance != remittances.last)
+                  Divider(
+                    height: 1,
+                    color: colorScheme.onBackground.withOpacity(0.1),
+                    indent: 16,
+                    endIndent: 16,
+                  ),
+              ],
+            );
+          }).toList(),
         ],
       ),
     );

@@ -91,9 +91,9 @@ class _RegisterPageState extends State<RegisterPage> {
     try {
       final user = await UserRepository.register(
         User(
-          first_name: _firstNameController.text,
-          last_name: _lastNameController.text,
-          phone_number: _phoneController.text,
+          firstName: _firstNameController.text,
+          lastName: _lastNameController.text,
+          phoneNumber: _phoneController.text,
           country: _countryController.text,
           email: _emailController.text,
           password: _passwordController.text,

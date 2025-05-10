@@ -60,6 +60,8 @@ dependencies:
   flutter_native_contact_picker: ^0.0.10
   toastification: ^3.0.2
   flutter_vector_icons: ^2.0.0
+  web_socket_channel: ^3.0.3
+  shimmer: ^3.0.0
 
 dev_dependencies:
   flutter_test:

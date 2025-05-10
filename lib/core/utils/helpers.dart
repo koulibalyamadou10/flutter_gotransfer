@@ -1,3 +1,8 @@
+import 'dart:convert';
+
+import 'package:fluttertoast/fluttertoast.dart';
+import 'package:http/http.dart';
+
 import '../../config/app_config.dart';
 
 class Helpers {
@@ -74,6 +79,12 @@ class Helpers {
 
   static String getCountryCode(String country){
     return AppConfig.countryCodeDialingCodes[country] ?? "";
+  }
+
+  static Map<String, dynamic> decodeResponse(Response response){
+    String decodedResponse = utf8.decode(response.body.runes.toList());
+    var jsonResponse = jsonDecode(decodedResponse);
+    return jsonResponse;
   }
 
   static String getCountry(String codeCountry){

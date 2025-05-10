@@ -1,90 +1,75 @@
 import 'dart:convert';
-import 'dart:io';
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/widgets.dart';
-import 'package:gotransfer/data/models/beneficiary_model.dart';
-import 'package:gotransfer/data/models/user_model.dart';
-import 'package:gotransfer/data/repositories/reference_repository.dart';
+import 'package:fluttertoast/fluttertoast.dart';
+import 'package:gotransfer/config/api_config.dart';
+import 'package:gotransfer/core/utils/helpers.dart';
 import 'package:gotransfer/data/repositories/user_repository.dart';
+import 'package:gotransfer/widgets/components/custom_toast.dart';
 import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
 
-import '../../config/api_config.dart';
 import '../../routes/app_routes.dart';
 import '../../widgets/components/custom_scaffold.dart';
-import '../models/reference_model.dart';
+import '../models/role_model.dart';
+import '../repositories/reference_repository.dart';
 
-class DestinataireRepository {
+class RoleRepository {
 
-  static final String USER = 'user';
-  static final String PASSWORDHASHED = 'passwordHashed';
-  static final String EMAIL = 'email';
-
-  static Future<bool> create(Destinataire destinataire, BuildContext context) async {
-    // Récupérer le token une seule fois
-    final accessToken = (await ReferenceRepository.getReferenceInSharedReference()).accessToken;
+  static Future<bool> create(Role role, BuildContext context, FToast fToast) async {
     try {
-      var response = await http.post(
-          Uri.parse(ApiConfig.addDestinataireEndpoint),
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": "Bearer $accessToken" // Utiliser la variable directement
-          },
-          body: jsonEncode(destinataire.toJson())
+      final accessToken = (await ReferenceRepository
+          .getReferenceInSharedReference()).accessToken;
+
+      final response = await http.post(
+        Uri.parse('${ApiConfig.baseUrl}/beneficiary/register/'),
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer $accessToken"
+        },
+        body: jsonEncode(role.toJson()),
+        encoding: Encoding.getByName('utf-8')
       );
 
-      if(response.statusCode == 201 ) {
-        Map<String, dynamic> success = jsonDecode(response.body);
-        print(success);
-        User user = await UserRepository.getUserInSharedPreferences();
-        user.destinataires.add(Destinataire.fromJson(success));
-        await UserRepository.setUserInSharedPreferences(user);
-        ScaffoldMessenger.of(context).showSnackBar(
-            CustomSnackBar(content: Text(
-                'Beneficiaire crée !'
-            ), backgroundColor: Colors.green)
+
+      Map<String, dynamic> decodedResponse = Helpers.decodeResponse(response);
+      if ( response.statusCode == 201 ){
+        fToast.showToast(
+            child: CustomToast(
+              message: 'Beneficiaire inscrit',
+              backgroundColor: Colors.green,
+            ),
+            gravity: ToastGravity.TOP
         );
+        final List<dynamic> roles = await UserRepository.getRolesInSharedPreferences();
+        roles.add(decodedResponse);
+        await UserRepository.setRolesInSharedPreferences(roles);
+        Navigator.pop(context);
         return true;
-      }else if(response.statusCode == 401 ) {
-        Map<String, dynamic> errors = jsonDecode(response.body);
-        print(errors);
-        ScaffoldMessenger.of(context).showSnackBar(
-            CustomSnackBar(content: Text(
-                'Votre session a expiré !'
-            ), backgroundColor: Colors.red)
+      } else if ( response.statusCode == 400 ) {
+        fToast.showToast(
+            child: CustomToast(
+              message: decodedResponse['detail'] ?? '',
+              backgroundColor: Colors.red,
+            ),
+            gravity: ToastGravity.TOP
         );
-        await UserRepository.setUserCurrentPage(AppRoutes.quick_transfer);
-        Navigator.pushNamed(context, AppRoutes.login);
-      }else if(response.statusCode == 400 ) {
-        Map<String, dynamic> errors = jsonDecode(response.body);
-        print(errors);
-        ScaffoldMessenger.of(context).showSnackBar(
-            CustomSnackBar(content: Text(
-                errors.containsKey('detail') ? errors['detail'] :
-                errors.containsKey('phone_number') ? errors['phone_number'][0] :
-                'Une erreur est survenue !'
-            ), backgroundColor: Colors.red)
-        );
-      }else {
-        Map<String, dynamic> errors = jsonDecode(response.body);
-        print(errors);
-        ScaffoldMessenger.of(context).showSnackBar(
-            CustomSnackBar(content: Text(
-                'Veuiller ressayer plus tard !'
-            ), backgroundColor: Colors.red)
+      }else if ( response.statusCode == 401 ) {
+        fToast.showToast(
+            child: CustomToast(
+              message: 'votre session a expiré !',
+              backgroundColor: Colors.red,
+            ),
+            gravity: ToastGravity.TOP
         );
       }
-    }catch( e ){
-      print(e);
-      ScaffoldMessenger.of(context).showSnackBar(
-          CustomSnackBar(content: Text('Erreur $e'), backgroundColor: Colors.red)
-      );
+    }catch(e){
+
     }
     return false;
   }
 
-  static Future<Destinataire?> getCountryCodByPhoneNumber(String phoneNumber, BuildContext context) async {
+  static Future<Role?> getCountryCodByPhoneNumber(String phoneNumber, BuildContext context) async {
     final accessToken = (await ReferenceRepository.getReferenceInSharedReference()).accessToken;
     try {
       var response = await http.post(
@@ -100,7 +85,7 @@ class DestinataireRepository {
 
       if(response.statusCode == 200 ) {
         Map<String, dynamic> success = jsonDecode(response.body);
-        return Destinataire.fromJson(success);
+        return Role.fromJson(success);
       }else if(response.statusCode == 400 ) {
         Map<String, dynamic> errors = jsonDecode(response.body);
         print(errors);
@@ -147,7 +132,14 @@ class DestinataireRepository {
     return null;
   }
 
-  static Future<Map<String, dynamic>?> getXRate(String phoneNumber, String srcCurrency, String dstCurrency, String srcCountry, String dstCountry, double amount, BuildContext context) async {
+  static Future<Map<String, dynamic>?> getXRate(String phoneNumber,
+      String srcCurrency,
+      String dstCurrency,
+      String srcCountry,
+      String dstCountry,
+      double amount,
+      BuildContext context,
+      FToast fToast) async {
     final accessToken = (await ReferenceRepository.getReferenceInSharedReference()).accessToken;
     try {
       var response = await http.post(
@@ -166,12 +158,12 @@ class DestinataireRepository {
           })
       );
 
+      Map<String, dynamic> decodedResponse = Helpers.decodeResponse(response);
       if(response.statusCode == 200 ) {
-        Map<String, dynamic> success = jsonDecode(response.body);
+        Map<String, dynamic> success = decodedResponse;
         return success;
       }else if(response.statusCode == 400 ) {
-        Map<String, dynamic> errors = jsonDecode(response.body);
-        print(errors);
+        Map<String, dynamic> errors = decodedResponse;
         ScaffoldMessenger.of(context).showSnackBar(
             CustomSnackBar(content: Text(
                 errors.containsKey('detail') ? errors['detail'] :

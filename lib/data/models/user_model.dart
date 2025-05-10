@@ -1,14 +1,16 @@
 import 'dart:convert';
 import 'dart:ffi';
 
-import 'beneficiary_model.dart';
+import 'package:gotransfer/data/models/remittance_model.dart';
+
+import 'role_model.dart';
 
 class User {
   final int? id;
-  final String first_name;
-  final String last_name;
+  final String firstName;
+  final String lastName;
   final String email;
-  final String phone_number;
+  final String phoneNumber;
   final String address;
   final String? country;
   final String? image;
@@ -16,15 +18,17 @@ class User {
   final double? balance;
   String? currency = '';
   final double? commission;
-  List<Destinataire> destinataires = [];
+  List<Role> roles = [];
+  List<Remittance> remittances_today = [];
+  List<Remittance> remittances_last = [];
   late bool isLoaded = false;
 
   User({
     this.id,
-    required this.first_name,
-    required this.last_name,
+    required this.firstName,
+    required this.lastName,
     required this.email,
-    required this.phone_number,
+    required this.phoneNumber,
     required this.address,
     this.country,
     this.image,
@@ -37,10 +41,10 @@ class User {
   factory User.fromJson(Map<String, dynamic> json) {
     User user = User(
       id: json['id'],
-      first_name: json['first_name'],
-      last_name: json['last_name'],
+      firstName: json['first_name'],
+      lastName: json['last_name'],
       email: json['email'],
-      phone_number: json['phone_number'],
+      phoneNumber: json['phone_number'],
       country: json['country']?? '',
       address: json['address'] ?? '',
       image: json['image'] ?? '',
@@ -49,21 +53,32 @@ class User {
       commission: json['commission'] is double ? json['balance'] : double.parse(json['commission']),
       password: json['password'] ?? '',
     );
-    List<dynamic> beneficiariesJson = json['beneficiaries'] ?? [];
-    List<Destinataire> destinataires = beneficiariesJson
-        .map((beneficiaryJson) => Destinataire.fromJson(beneficiaryJson))
+    List<dynamic> rolesJson = json['roles'] ?? [];
+    List<dynamic> remittancesTodayJson = json['remittances_today'] ?? [];
+    List<dynamic> remittancesLastJson = json['remittances_last'] ?? [];
+
+    List<Role> roles = rolesJson
+        .map((roleJson) => Role.fromJson(roleJson))
         .toList();
-    user.destinataires = destinataires;
+    List<Remittance> remittances_today = remittancesTodayJson
+        .map((remittanceJson) => Remittance.fromJson(remittanceJson))
+        .toList();
+    List<Remittance> remittancesLast = remittancesLastJson
+        .map((remittanceJson) => Remittance.fromJson(remittanceJson))
+        .toList();
+    user.roles = roles;
+    user.remittances_today = remittances_today;
+    user.remittances_last = remittancesLast;
     return user;
   }
 
   Map<String, dynamic> toJson() {
     return {
       'id': id,
-      'first_name': first_name,
-      'last_name': last_name,
+      'first_name': firstName,
+      'last_name': lastName,
       'email': email,
-      'phone_number': phone_number,
+      'phone_number': phoneNumber,
       'address': address,
       'image': image,
       'country': country?? '',
@@ -71,7 +86,7 @@ class User {
       'currency': currency,
       'balance': balance,
       'commission': commission,
-      'beneficiaries': destinataires.map((d) => d.toJson()).toList(),
+      'beneficiaries': roles.map((d) => d.toJson()).toList(),
     };
   }
 

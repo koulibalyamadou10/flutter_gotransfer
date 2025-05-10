@@ -4,6 +4,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:gotransfer/data/models/user_model.dart';
 import 'package:gotransfer/data/repositories/reference_repository.dart';
 import 'package:http/http.dart' as http;
@@ -12,11 +13,16 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../config/api_config.dart';
 import '../../routes/app_routes.dart';
 import '../../widgets/components/custom_scaffold.dart';
+import '../../widgets/components/custom_toast.dart';
 import '../models/reference_model.dart';
+import '../models/role_model.dart';
 
 class UserRepository {
 
   static final String USER = 'user';
+  static final String ROLES = 'roles';
+  static final String CURRENCY = 'currency';
+  static final String COUNTRY = 'country';
   static final String PASSWORDHASHED = 'passwordHashed';
   static final String EMAIL = 'email';
   static final String CURReNTPAGe = 'currentPage';
@@ -25,11 +31,11 @@ class UserRepository {
     try {
       // Prepare the request
       var request = http.MultipartRequest('POST', Uri.parse(ApiConfig.registerEndpoint))
-        ..fields['first_name'] = user.first_name
-        ..fields['last_name'] = user.last_name
+        ..fields['first_name'] = user.firstName
+        ..fields['last_name'] = user.lastName
         ..fields['country'] = user.country ?? ''
         ..fields['email'] = user.email
-        ..fields['phone_number'] = user.phone_number
+        ..fields['phone_number'] = user.phoneNumber
         ..fields['address'] = user.address
         ..fields['commission'] = '${user.commission}'
         ..fields['password'] = user.password;
@@ -82,7 +88,7 @@ class UserRepository {
     }
   }
 
-  static Future<void> login(User user, BuildContext context, {bool isSavedSession = true}) async {
+  static Future<void> login(User user, BuildContext context, FToast fToast, {bool isSavedSession = true}) async {
     try {
       var response = await http.post(
           Uri.parse(ApiConfig.loginEndpoint),
@@ -91,33 +97,51 @@ class UserRepository {
       );
 
       if( response.statusCode == 200 ){
-        ScaffoldMessenger.of(context).showSnackBar(
-            CustomSnackBar(content: Text('Connexion Reussie !'), backgroundColor: Colors.green )
+        fToast.showToast(
+            child: CustomToast(
+              message: 'Connexion Reussie !',
+              textColor: Colors.white,
+              backgroundColor: Colors.green,
+            ),
+            gravity: ToastGravity.TOP
         );
         Map<String, dynamic> success = jsonDecode(response.body);
-        print(success);
+        print(success['user']['roles']);
         bool result = await ReferenceRepository.setReferenceInSharedReference(
             Reference(
                 id: 1,
                 accessToken: success[ReferenceRepository.ACCESSTOKEN],
                 refreshToken: success[ReferenceRepository.REFRESHTOKEN]
             )
-        ) && await UserRepository.setUserInSharedPreferences(User.fromJson(success[UserRepository.USER]));
+        )
+        && await UserRepository.setUserInSharedPreferences(User.fromJson(success[UserRepository.USER]))
+        && await UserRepository.setRolesInSharedPreferences(success['user']['roles'])
+        && await UserRepository.setCurrencyInSharedPreferences(success['user']['currency'])
+        && await UserRepository.setCountryInSharedPreferences(success['user']['country'] ?? '');
+
         if( isSavedSession ){
-            await UserRepository.setUserEmail(success[UserRepository.USER]['email']) && await UserRepository.setUserPasswordHashed(user.password);
+          await UserRepository.setUserEmail(success[UserRepository.USER]['email']) && await UserRepository.setUserPasswordHashed(user.password);
         }
         String cp = (await UserRepository.getUserCurrentPage());
         if ( result ) Navigator.popAndPushNamed(context, cp.isEmpty ? AppRoutes.home : cp );
       }else {
-        ScaffoldMessenger.of(context).showSnackBar(
-            CustomSnackBar(content: Text(
-                jsonDecode(response.body)['detail']
-            ), backgroundColor: Colors.red)
+        fToast.showToast(
+            child: CustomToast(
+              message: jsonDecode(response.body)['detail'],
+              textColor: Colors.white,
+              backgroundColor: Colors.red,
+            ),
+            gravity: ToastGravity.TOP
         );
       }
     }catch( e ){
-      ScaffoldMessenger.of(context).showSnackBar(
-          CustomSnackBar(content: Text('Erreur $e'), backgroundColor: Colors.red)
+      fToast.showToast(
+          child: CustomToast(
+            message: 'Erreur $e',
+            textColor: Colors.white,
+            backgroundColor: Colors.red,
+          ),
+          gravity: ToastGravity.TOP
       );
     }
   }
@@ -183,9 +207,53 @@ class UserRepository {
 
   static Future<User> getUserInSharedPreferences() async {
     SharedPreferences sharedPreferences = await SharedPreferences.getInstance();
-    print('pository');
-    print(await sharedPreferences.getString(USER));
     return User.fromJson(jsonDecode(await sharedPreferences.getString(USER) ?? '{}' ));
+  }
+
+  static Future<bool> setCurrencyInSharedPreferences(String currency) async {
+    SharedPreferences sharedPreferences = await SharedPreferences.getInstance();
+    return await sharedPreferences.setString(CURRENCY, currency);
+  }
+
+  static Future<String> getCurrencyInSharedPreferences() async {
+    SharedPreferences sharedPreferences = await SharedPreferences.getInstance();
+    return await sharedPreferences.getString(CURRENCY) ?? '';
+  }
+
+  static Future<bool> setCountryInSharedPreferences(String country) async {
+    SharedPreferences sharedPreferences = await SharedPreferences.getInstance();
+    return await sharedPreferences.setString(COUNTRY, country);
+  }
+
+  static Future<String> getCountryInSharedPreferences() async {
+    SharedPreferences sharedPreferences = await SharedPreferences.getInstance();
+    return await sharedPreferences.getString(COUNTRY) ?? '';
+  }
+
+  static Future<bool> setRolesInSharedPreferences(List<dynamic> roles) async {
+    try {
+      final sharedPreferences = await SharedPreferences.getInstance();
+      return await sharedPreferences.setString(ROLES, jsonEncode(roles));
+    } catch (e) {
+      debugPrint('Erreur lors de la sauvegarde des rôles: $e');
+      return false;
+    }
+  }
+
+  static Future getRolesInSharedPreferences() async {
+    try {
+      final sharedPreferences = await SharedPreferences.getInstance();
+      final rolesJsonString = sharedPreferences.getString(ROLES);
+
+      if (rolesJsonString == null || rolesJsonString.isEmpty) {
+        return []; // Retourne une liste vide si aucune donnée n'est sauvegardée
+      }
+
+      return jsonDecode(rolesJsonString);
+    } catch (e) {
+      debugPrint('Erreur lors de la récupération des rôles: $e');
+      return {}; // Retourne une liste vide en cas d'erreur
+    }
   }
 
   static Future<bool> setUserPasswordHashed(String passwordHashed) async {

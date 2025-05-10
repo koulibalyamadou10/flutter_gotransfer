@@ -3,6 +3,8 @@ class ApiConfig {
   static const String port = ':8000';
   static const String host = '192.168.100.2';
 
+  static const String baseUrl = '${protocol}://${host}${port}';
+
   static const String apiKey = '54ba8b90cf719f673b689cd6';
 
   static const String loginEndpoint = '${protocol}://${host}${port}/account/login/';
@@ -19,6 +21,9 @@ class ApiConfig {
   
   static const String addTopupEndpoint = '${protocol}://${host}${port}/topup/create/';
   static const String listProductTopupEndpoint = '${protocol}://${host}${port}/topup/products/';
+
+  // url de config
+
 
   static const String paymentEndpoint = '/payments';
   static const String transferEndpoint = '/transfers';

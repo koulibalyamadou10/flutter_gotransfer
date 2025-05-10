@@ -38,10 +38,11 @@ class _SplashPageState extends State<SplashPage> with SingleTickerProviderStateM
       CurvedAnimation(parent: _controller, curve: Curves.elasticOut),
     );
 
-    Future.delayed(2800.ms, () {
+    Future.delayed(2500.ms, () {
       SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
       if (mounted) {
-        UserRepository.getUserEmail().then((onValue) async {
+        Navigator.pushReplacementNamed(context, AppRoutes.login);
+        /*UserRepository.getUserEmail().then((onValue) async {
           String email = onValue;
           if( email.isEmpty )
             Navigator.pushReplacementNamed(context, AppRoutes.login);
@@ -54,7 +55,7 @@ class _SplashPageState extends State<SplashPage> with SingleTickerProviderStateM
               password: Helpers.decrypt(password)
             );
           }
-        });
+        });*/
       }
     });
   }

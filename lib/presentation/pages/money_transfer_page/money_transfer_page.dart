@@ -6,13 +6,13 @@ import 'package:flutter_native_contact_picker/flutter_native_contact_picker.dart
 import 'package:flutter_native_contact_picker/model/contact.dart';
 import 'package:flutter_vector_icons/flutter_vector_icons.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:gotransfer/config/api_config.dart';
 import 'package:gotransfer/config/app_config.dart' as App;
 import 'package:gotransfer/constants/dimensions.dart';
 import 'package:gotransfer/core/utils/helpers.dart';
-import 'package:gotransfer/data/models/beneficiary_model.dart';
 import 'package:gotransfer/data/models/remittance_model.dart';
 import 'package:gotransfer/data/models/user_model.dart';
-import 'package:gotransfer/data/repositories/destinataire_repository.dart';
+import 'package:gotransfer/data/repositories/role_repository.dart';
 import 'package:gotransfer/data/repositories/remittance_repository.dart';
 import 'package:gotransfer/data/repositories/user_repository.dart';
 import 'package:gotransfer/routes/app_routes.dart';
@@ -23,6 +23,8 @@ import 'package:gotransfer/widgets/inputs/custom_phonefield.dart';
 import 'package:gotransfer/widgets/inputs/custom_textformfield.dart';
 import 'package:permission_handler/permission_handler.dart';
 
+import '../../../data/models/role_model.dart';
+import '../../../widgets/components/grid_selectable_list.dart';
 import '../../../widgets/components/horizontal_selectable_list.dart';
 import '../../../widgets/components/top_snackbar.dart';
 
@@ -35,6 +37,7 @@ class MoneyTransferPage extends StatefulWidget {
 
 class _MoneyTransferPageState extends State<MoneyTransferPage> {
   final _formKey = GlobalKey<FormState>();
+  late UniqueKey _phoneNumberKey = UniqueKey();
   final _amountSendController = TextEditingController(text: '0');
   final FocusNode _focusNodeAmountSendController = FocusNode();
   final _amountReceiveController = TextEditingController(text: '0');
@@ -43,12 +46,13 @@ class _MoneyTransferPageState extends State<MoneyTransferPage> {
   final _feesController = TextEditingController(text: "0");
   final _totalController = TextEditingController();
   String _selectedContact = '';
-  Destinataire? destinataire = null;
+  Role? role = null;
   String _selectedPaymentMethod = 'Mobile Money';
   bool _isSending = false;
   bool _isLoading = true;
   UniqueKey containerButtonKey = UniqueKey();
   final FToast fToast = FToast();
+  Map<String, Role> contactToRole = {};
 
   // Conversion final
   Map<String, dynamic> data =  {
@@ -65,21 +69,32 @@ class _MoneyTransferPageState extends State<MoneyTransferPage> {
   // Destinataires
   final List<String> destinataires = [];
 
-  final TextEditingController _phoneController = TextEditingController();
 
   // Méthodes de paiement disponibles
-  final List<HorizontalSelectableItem> _paymentMethods = [
-    HorizontalSelectableItem(
-      text: 'Mobile Money',
-      leadingIcon: Icon(FontAwesome.mobile_phone, size: 24),
+  final List<GridSelectableItem> _paymentMethods = [
+    GridSelectableItem(
+      text: 'Orange Money',
+      asset: 'assets/images/orange-money.png',
+      leadingIcon: Image.asset('assets/images/orange-money.png', width: 200, height: 50),
+      trailingIcon: null
     ),
-    HorizontalSelectableItem(
-      text: 'Go Pay',
-      leadingIcon: Icon(FontAwesome.paypal, size: 24),
+    GridSelectableItem(
+      text: 'GoPay',
+      asset: 'assets/images/gopay.png',
+      leadingIcon: Image.asset('assets/images/gopay.png', width: 200, height: 50),
+      trailingIcon: null
     ),
-    HorizontalSelectableItem(
-      text: 'Cash Pickup',
-      leadingIcon: Icon(Icons.cabin_sharp, size: 24),
+    GridSelectableItem(
+      text: 'Wave',
+      asset: 'assets/images/wave.png',
+      leadingIcon: Image.asset('assets/images/wave.png', width: 200, height: 50),
+      trailingIcon: null
+    ),
+    GridSelectableItem(
+      text: 'CashPickup',
+      asset: 'assets/images/cash-pickup.png',
+      leadingIcon: Image.asset('assets/images/cash-pickup.png', width: 200, height: 50),
+      trailingIcon: null
     ),
   ];
 
@@ -99,22 +114,20 @@ class _MoneyTransferPageState extends State<MoneyTransferPage> {
         _handleAmountReceiveChange();
       }
     });
-
     _loadDestinataires();
-
     fToast.init(context);
   }
 
   Future<void> _handleAmountSendChange() async {
     if (_amountSendController.text.isNotEmpty) {
-      await _getTargetCurrency();
+      await _getTargetCurrency(double.tryParse(_amountSendController.text) ?? 0);
       // Autres traitements nécessaires...
     }
   }
 
   Future<void> _handleAmountReceiveChange() async {
     if (_amountReceiveController.text.isNotEmpty) {
-      await _getTargetCurrency();
+      await _getTargetCurrency(double.tryParse(_amountReceiveController.text) ?? 0);
       // Autres traitements nécessaires...
     }
   }
@@ -141,17 +154,23 @@ class _MoneyTransferPageState extends State<MoneyTransferPage> {
     }
 
     try {
-      User user = await UserRepository.getUserInSharedPreferences();
+      List<dynamic> roles = await UserRepository.getRolesInSharedPreferences();
+      print(roles);
       List<String> loadedDestinataires = [];
+      Map<String, Role> loadedcontactToRole = {};
 
-      for (var destinataire in user.destinataires) {
-        loadedDestinataires.add('${destinataire.first_name} ${destinataire.last_name} ${destinataire.phone_number}');
+      for (var role in roles) {
+        Role d = Role.fromJson(role);
+        loadedDestinataires.add('${d.firstName} ${d.lastName} ${d.telephone}');
+        loadedcontactToRole['${d.firstName} ${d.lastName} ${d.telephone}'] = d;
       }
 
       if (mounted) {
         setState(() {
           destinataires.clear();
+          contactToRole.clear();
           destinataires.addAll(loadedDestinataires);
+          contactToRole.addAll(loadedcontactToRole);
           _isLoadingDestinataires = false;
         });
       }
@@ -169,58 +188,26 @@ class _MoneyTransferPageState extends State<MoneyTransferPage> {
     }
   }
 
-  void _convertSendToReceive() async {
-    if (_amountSendController.text.isEmpty) {
-      _amountReceiveController.clear();
-      return;
-    }
-
-    final amount = double.tryParse(_amountSendController.text);
-    if (amount == null) return;
-
-    await _getTargetCurrency();
-  }
-
-  Future<void> _convertReceiveToSend() async {
-    if (_amountReceiveController.text.isEmpty) {
-      _amountSendController.clear();
-      return;
-    }
-
-    final amount = double.tryParse(_amountReceiveController.text.replaceAll(',', ''));
-    if (amount == null) return;
-
-    await _getTargetCurrency();
-  }
-
   String _targetCurrency = '';
   bool _targetCurrencyLoader = false;
 
-  Future<void> _getTargetCurrency() async {
+  Future<void> _getTargetCurrency(double amount) async {
     if (_selectedContact.isNotEmpty) {
       setState(() {
         _targetCurrencyLoader = true;
         _isLoading = true;
       });
 
-      String _numberContact = Helpers.getNumberAndNameUser(_selectedContact)!['phone_number'] ?? '';
-      String _srcCurrency = (await UserRepository.getUserInSharedPreferences()).currency ?? '';
-      Destinataire d = (await DestinataireRepository.getCountryCodByPhoneNumber(_numberContact, context))!;
-      String _dstCurrency = d.countryCurrency ?? '';
-      double _amout = double.tryParse(_amountSendController.text) ?? 0;
-      String _srcCountry = App.AppConfig.currencyToCountry[_srcCurrency] ?? '';
-      String _dstCountry = App.AppConfig.currencyToCountry[_dstCurrency] ?? '';
-
-      print('$_numberContact $_srcCurrency $_dstCurrency $_srcCountry $_dstCountry $_amout');
-
-      Map<String, dynamic>? rs = await DestinataireRepository.getXRate(
-        _numberContact,
-        _srcCurrency,
-        _dstCurrency,
-        _srcCountry,
-        _dstCountry,
-        _amout,
-        context
+      Role role = contactToRole[_selectedContact]!;
+      Map<String, dynamic>? rs = await RoleRepository.getXRate(
+        role.telephone,
+        await UserRepository.getCurrencyInSharedPreferences(),
+        role.countryCurrency,
+        await UserRepository.getCountryInSharedPreferences(),
+        role.country,
+        amount,
+        context,
+        fToast
       );
       setState(() {
         _targetCurrencyLoader = false;
@@ -231,18 +218,18 @@ class _MoneyTransferPageState extends State<MoneyTransferPage> {
 
       print(rs);
 
-      setState(() {
+      /*setState(() {
         data = rs;
         destinataire = d;
-        _amountSendController.text = '${data['amount']} $_srcCurrency';
+        _amountSendController.text = '${data['amount']} ${data['currency']}';
         _amountReceiveController.text = '${data['amount'] * data['ratio']} ${_dstCurrency}';
-        _rateController.text = "1 ${_srcCurrency} = ${data['ratio']} ${_dstCurrency}";
+        _rateController.text = "Taux de change 1.00 ${user.currency} = ${data['ratio']} ${_dstCurrency}";
         _feesController.text = '${data['total_fee']}';
-        _totalController.text = '${data['total_amount']} ${_srcCurrency}';
+        _totalController.text = '${data['total_amount']} ${user.currency}';
         _targetCurrency = _dstCurrency;
         _targetCurrencyLoader = false;
         _isLoading = false;
-      });
+      });*/
 
       setState(() {
       });
@@ -256,13 +243,15 @@ class _MoneyTransferPageState extends State<MoneyTransferPage> {
       });
 
       User user = (await UserRepository.getUserInSharedPreferences());
-      if( user == null || destinataire == null ) return;
+      if( user == null || role == null ) return;
+
+      print(user);
 
       bool rs = await RemittanceRepository.create(
         Remittance(
           transactionId: '',
           sender: user.id ?? 0,
-          role: destinataire!.id ?? 0,
+          role: role!.id ?? 0,
           cashoutLocation: 'Guinea',
           payoutOption: _selectedPaymentMethod,
           amountSent: double.tryParse(_amountSendController.text) ?? 0,
@@ -315,10 +304,14 @@ class _MoneyTransferPageState extends State<MoneyTransferPage> {
     ).showModal(context);
   }
 
-  TextEditingController _firstNameController = TextEditingController();
-  TextEditingController _lastNameController = TextEditingController();
+  TextEditingController _firstNameController = TextEditingController(text: '');
+  TextEditingController _lastNameController = TextEditingController(text: '');
+  TextEditingController _countryController = TextEditingController(text: 'GN');
+  TextEditingController _countryCodeController = TextEditingController(text: '+224');
+  TextEditingController _countryCurrencyController = TextEditingController(text: '+224');
+  final TextEditingController _phoneController = TextEditingController(text: '');
+  final TextEditingController _emailController = TextEditingController(text: '');
   bool _isAddingBeneficiaire = false;
-  String _countryCode = '+224';
 
   Future<void> _addDestinataire() async {
     FocusScope.of(context).unfocus();
@@ -326,20 +319,36 @@ class _MoneyTransferPageState extends State<MoneyTransferPage> {
       setState(() => _isAddingBeneficiaire = true);
       setState(() => containerButtonKey = UniqueKey());
       await UserRepository.getUserInSharedPreferences();
-      bool rs = await DestinataireRepository.create(
-          Destinataire(
-            first_name: _firstNameController.text ?? '',
-            last_name: _lastNameController.text ?? '',
-            pays: Helpers.getCountry(_countryCode),
-            countryCode: _countryCode,
-            countryCurrency: Helpers.getCurrency(_countryCode),
-            phone_number: _phoneController.text
+
+      bool rs = await RoleRepository.create(
+          Role(
+            id: 0,
+            senderId: 0,
+            firstName: _firstNameController.text,
+            lastName: _lastNameController.text,
+            country: _countryController.text,
+            countryCode: _countryCodeController.text,
+            countryCurrency: _countryCurrencyController.text,
+            telephone: _phoneController.text,
+            email: _emailController.text,
+            active: true,
+            idCard: '',
+            idExpDate: '',
+            createdAt: DateTime.now(),
+            updatedAt: DateTime.now(),
           ),
-          context
+          context,
+        fToast
       );
       if( rs ) {
         _loadDestinataires();
-        Navigator.of(context).pop();
+        setState(() {
+          _firstNameController.text = '';
+          _lastNameController.text = '';
+          _phoneController.text = '';
+          _phoneNumberKey = UniqueKey();
+        });
+        //Navigator.of(context).pop();
       };
       setState(() => _isAddingBeneficiaire = false);
     }
@@ -383,12 +392,10 @@ class _MoneyTransferPageState extends State<MoneyTransferPage> {
         String? rawPhoneNumber = contact.phoneNumbers![0];
 
         if (rawPhoneNumber != null) {
-          // Nettoyage du numéro
-          final Map<String, String> cleanedNumber = Helpers.parsePhoneNumber(rawPhoneNumber);
           setState(() {
-            _countryCode = cleanedNumber!['countryCode']!;
+            _phoneController.text = rawPhoneNumber.trim().trimLeft().trimRight();
+            _phoneNumberKey = UniqueKey();
           });
-          print('cleanedNumber $cleanedNumber');
         }
       } else {
         print('Aucun numéro de téléphone disponible');
@@ -461,25 +468,42 @@ class _MoneyTransferPageState extends State<MoneyTransferPage> {
                               borderColor: Colors.black,
                             ),
                             SizedBox(height: AppDimensions.smallPadding),
+                            /*CustomTextFormField(
+                              hintText: 'example@gmail.com',
+                              controller: _emailController,
+                              validator: (value) => null,
+                              borderColor: Colors.black,
+                            ),*/
+                            SizedBox(height: AppDimensions.smallPadding),
                             CustomPhoneField(
-                              initialCountryCode: _countryCode,
+                              key: _phoneNumberKey,
+                              initialValue: _phoneController.text,
                               onChanged: (phone) {
+                                String _code = phone.countryCode;
                                 setState(() {
-                                  _phoneController.text = phone.completeNumber;
-                                  _countryCode = phone.countryCode;
+                                  _phoneController.text = phone.completeNumber.trim().replaceAll("+", "");
+                                  _countryController.text = App.AppConfig.codeToCountry[_code]!;
+                                  _countryCodeController.text = phone.countryCode.replaceAll("+", "");
+                                  _countryCurrencyController.text = App.AppConfig.codeToCurrency[_code]!;
                                 });
+                                print(_phoneController.text);
                               },
                             ),
                           ],
                         ),
                       ),
                       SizedBox(height: AppDimensions.smallPadding),
-                      Container(key:containerButtonKey, child: _isAddingBeneficiaire ? CustomLoader() : CustomButton(
-                        text: 'Ajouter',
-                        onTap: _addDestinataire,
-                        isFullWidth: true,
-                        isLoading: _isAddingBeneficiaire,
-                      ),),
+                      Container(
+                        key:containerButtonKey,
+                        child: _isAddingBeneficiaire ?
+                        CustomLoader() :
+                        CustomButton(
+                          text: 'Ajouter',
+                          onTap: _addDestinataire,
+                          isFullWidth: true,
+                          isLoading: _isAddingBeneficiaire,
+                        ),
+                      ),
                       SizedBox(height: AppDimensions.smallPadding),
                       CustomButton(
                         text: 'Annuler',
@@ -530,7 +554,7 @@ class _MoneyTransferPageState extends State<MoneyTransferPage> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.green.withOpacity(0.1),
+                  color: Colors.blue.withOpacity(0.1),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(Icons.check_circle,
@@ -666,7 +690,7 @@ class _MoneyTransferPageState extends State<MoneyTransferPage> {
               child: Text(
                 value,
                 style: TextStyle(
-                  color: isAmount ? Colors.green[700] : Colors.black,
+                  color: isAmount ? Colors.blue[700] : Colors.black,
                   fontWeight: isAmount ? FontWeight.bold : FontWeight.normal,
                   fontSize: isAmount ? 15 : 14,
                 ),
@@ -739,34 +763,40 @@ class _MoneyTransferPageState extends State<MoneyTransferPage> {
               SizedBox(height: 16),
 
               // Section Taux de change
-              _buildInfoField(
-                controller: _rateController,
-                label: 'Taux de change ${_rateController.text}',
-                icon: Icons.currency_exchange,
-                colorScheme: colorScheme,
-                crossAxisAlignment: CrossAxisAlignment.center
+              Center(
+                child: Text(
+                  '${_rateController.text}',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
               ),
 
               SizedBox(height: 2*AppDimensions.smallPadding),
 
-              // Section Total
-              _buildInfoField(
-                controller: _totalController,
-                label: 'Total à transferer ${_totalController.text}',
-                icon: Icons.calculate,
-                colorScheme: colorScheme,
-                crossAxisAlignment: CrossAxisAlignment.center
+              Container(
+                child: Row(
+                  children: [
+                    Expanded(flex:1, child: Center(
+                      child: Text(
+                        'Montant à Payer',
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      ),
+                    )),
+                    Expanded(child: CustomTextFormField(controller: _totalController,))
+                  ],
+                ),
               ),
 
               SizedBox(height: 24),
 
               // Section Méthode de paiement
-              Text(
-                'Méthode de paiement',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              Center(
+                child: Text(
+                  'Méthode de paiement',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
               ),
               SizedBox(height: 8),
-              HorizontalSelectableList(
+              GridSelectableList(
                 items: _paymentMethods,
                 onItemSelected: (selectedItem) {
                   print('Item sélectionné: $selectedItem');
@@ -788,7 +818,7 @@ class _MoneyTransferPageState extends State<MoneyTransferPage> {
               // Bouton Envoyer
               _isSending ? CustomLoader() :
               CustomButton(
-                text: 'Envoyer le transfer',
+                text: 'Envoyer',
                 onTap: _isSending ? null : _submitTransfer,
                 isFullWidth: true,
                 backgroundColor: colorScheme.primary,
@@ -878,100 +908,6 @@ class _MoneyTransferPageState extends State<MoneyTransferPage> {
               }
             }),
           ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildInfoField({
-    required TextEditingController controller,
-    required String label,
-    required IconData icon,
-    required ColorScheme colorScheme,
-    CrossAxisAlignment crossAxisAlignment = CrossAxisAlignment.start,
-    bool showBorder = true,
-    bool isDense = false,
-  }) {
-    return Column(
-      crossAxisAlignment: crossAxisAlignment,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(bottom: 6.0),
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: 14,
-              color: colorScheme.onSurface.withOpacity(0.7),
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ),
-        Container(
-          decoration: showBorder
-              ? BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: colorScheme.outline.withOpacity(0.3),
-              width: 1,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: colorScheme.shadow.withOpacity(0.05),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          )
-              : null,
-          child: TextFormField(
-            controller: controller,
-            readOnly: true,
-            style: TextStyle(
-              fontSize: isDense ? 14 : 16,
-              fontWeight: FontWeight.w500,
-              color: colorScheme.onSurface,
-            ),
-            decoration: InputDecoration(
-              contentPadding: EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: isDense ? 12 : 16,
-              ),
-              prefixIcon: Container(
-                margin: const EdgeInsets.only(right: 12),
-                decoration: BoxDecoration(
-                  border: Border(
-                    right: BorderSide(
-                      color: colorScheme.outline.withOpacity(0.2),
-                      width: 1,
-                    ),
-                  ),
-                ),
-                child: Icon(
-                  icon,
-                  size: 20,
-                  color: colorScheme.primary,
-                ),
-              ),
-              filled: true,
-              fillColor: colorScheme.surfaceVariant.withOpacity(0.2),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide.none,
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide.none,
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(
-                  color: colorScheme.primary.withOpacity(0.4),
-                  width: 2,
-                ),
-              ),
-            ),
-          ),
         ),
       ],
     );

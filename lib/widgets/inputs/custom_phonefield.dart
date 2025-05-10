@@ -4,6 +4,7 @@ import 'package:intl_phone_field/phone_number.dart';
 
 class CustomPhoneField extends StatelessWidget {
   final String initialCountryCode;
+  final String initialValue;
   final ValueChanged<PhoneNumber> onChanged;
   final FormFieldValidator<PhoneNumber>? validator;
   final TextStyle? style;
@@ -16,6 +17,7 @@ class CustomPhoneField extends StatelessWidget {
   const CustomPhoneField({
     Key? key,
     this.initialCountryCode = 'GN',
+    this.initialValue = '',
     required this.onChanged,
     this.validator,
     this.style,
@@ -30,6 +32,7 @@ class CustomPhoneField extends StatelessWidget {
   Widget build(BuildContext context) {
     return IntlPhoneField(
       initialCountryCode: initialCountryCode,
+      initialValue: initialValue,
       onChanged: onChanged,
       validator: validator,
       keyboardType: keyboardType,
