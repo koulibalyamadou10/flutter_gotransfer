@@ -439,7 +439,8 @@ class _DigitalPaymentsPageState extends State<DigitalPaymentsPage> {
             child: CustomToast(
             message: 'Erreur lors de la recharge',
             textColor: Colors.white,
-            backgroundColor: Colors.red.withOpacity(1),)
+            backgroundColor: Colors.red.withOpacity(1)
+        )
     );
     } finally {
     setState(() {

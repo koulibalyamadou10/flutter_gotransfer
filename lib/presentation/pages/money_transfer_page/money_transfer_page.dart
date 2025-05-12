@@ -7,6 +7,7 @@ import 'package:flutter_native_contact_picker/model/contact.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:gotransfer/core/config/app_config.dart' as App;
 import 'package:gotransfer/constants/dimensions.dart';
+import 'package:gotransfer/core/utils/helpers.dart';
 import 'package:gotransfer/data/models/remittance_model.dart';
 import 'package:gotransfer/data/repositories/role_repository.dart';
 import 'package:gotransfer/data/repositories/remittance_repository.dart';
@@ -55,6 +56,7 @@ class _MoneyTransferPageState extends State<MoneyTransferPage> {
     'fixed_fee' : 0,
     'pourcentage_frais' : 0,
     'total_fee' : 0,
+    'total_amout' : 0,
     'currency' : 0,
     'from' : '',
     'to' : '',
@@ -631,8 +633,8 @@ class _MoneyTransferPageState extends State<MoneyTransferPage> {
                   children: [
                     _buildDetailRow('Destinataire:', _selectedContact.split('-')[0]),
                     const Divider(height: 20, thickness: 0.5),
-                    _buildDetailRow('Montant envoyé:',
-                        '${_amountSendController.text}',
+                    _buildDetailRow('Montant total envoyé:',
+                        '${Helpers.formatDoubleToTwoDecimals(data['total_amount'])} ${data['currency']}',
                         isAmount: true),
                     const Divider(height: 20, thickness: 0.5),
                     _buildDetailRow('Montant reçu:',

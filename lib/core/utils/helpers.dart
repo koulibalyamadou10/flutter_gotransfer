@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:http/http.dart';
+import 'package:intl/intl.dart';
 
 import '../config/app_config.dart';
 
@@ -9,6 +10,12 @@ class Helpers {
   static bool isValidEmail(String email) {
     final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
     return emailRegex.hasMatch(email);
+  }
+
+  static String formatDoubleToTwoDecimals(double value) {
+    // Méthode alternative: Utilisation du package intl pour plus de flexibilité
+    NumberFormat formatter = NumberFormat("#0.00", "fr_FR");
+    return formatter.format(value);
   }
 
   static Map<String, String>? getNumberAndNameUser(String namePhoneNumber) {

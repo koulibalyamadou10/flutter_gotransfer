@@ -4,6 +4,7 @@ import 'package:fluttertoast/fluttertoast.dart';
 import 'package:gotransfer/data/models/topup_model.dart';
 import 'package:gotransfer/data/repositories/reference_repository.dart';
 import 'package:gotransfer/data/repositories/user_repository.dart';
+import 'package:gotransfer/widgets/components/custom_toast.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/config/api_config.dart';
@@ -38,7 +39,9 @@ class TopupRepository {
               'Recharge créée avec succès'
             ),
             backgroundColor: Colors.green,
-          )
+          ),
+            toastDuration: Duration(seconds: 3),
+          gravity: ToastGravity.TOP
         );
         // Mise à jour de l'utilisateur si nécessaire
         User user = await UserRepository.getUserInSharedPreferences();
@@ -47,23 +50,29 @@ class TopupRepository {
         Map<String, dynamic> errors = jsonDecode(response.body);
         print('Erreur 400: $errors');
         fToast.showToast(
-          child: CustomSnackBar(
-            content: Text(
-              errors.containsKey('detail')? errors['detail'] : 'Une erreur est survenue lors de la création de la recharge.'
+          child: CustomToast(
+            message: (
+              errors.containsKey('detail') ?
+              errors['detail'] :
+              'Une erreur est survenue lors de la création de la recharge.'
             ),
             backgroundColor: Colors.red,
-          )
+          ),
+            toastDuration: Duration(seconds: 3),
+          gravity: ToastGravity.TOP
         );
-        print('Erreur lors de la création de la recharge: ${response.body}');
       } else if( response.statusCode == 401) {
         Map<String, dynamic> errors = jsonDecode(response.body);
         fToast.showToast(
-          child: CustomSnackBar(
-            content: Text(
+          child: CustomToast(
+            message: (
               'Votre session a expiré. Veuillez vous reconnecter.'
             ),
             backgroundColor: Colors.red,
-          )
+
+          ),
+          toastDuration: Duration(seconds: 3),
+          gravity: ToastGravity.TOP,
         );
         Navigator.popAndPushNamed(context, AppRoutes.login );
       }

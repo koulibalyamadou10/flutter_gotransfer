@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:gotransfer/constants/dimensions.dart';
+import 'package:gotransfer/core/utils/helpers.dart';
 import 'package:gotransfer/data/repositories/user_repository.dart';
 import 'package:gotransfer/presentation/widgets/drawer/drawer_layout.dart';
 import 'package:gotransfer/routes/app_routes.dart';
@@ -247,7 +248,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                       SizedBox(width: 4),
                                       Text(
                                         !user.isLoaded ? '' :
-                                        '${user.balance}',
+                                        '${Helpers.formatDoubleToTwoDecimals(user.balance ?? 0)}',
                                         style: TextStyle(
                                           color: Colors.white,
                                           fontSize: 28,
@@ -544,12 +545,21 @@ class _HomeScreenState extends State<HomeScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         // Bénéficiaire
-                        Text(
-                          '${remittance.roleInfo}',
-                          style: TextStyle(
-                            color: colorScheme.onSurface.withOpacity(0.8),
-                            fontSize: 13,
-                          ),
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.person_outline,
+                              size: 14,
+                              color: colorScheme.onSurface.withOpacity(0.6),
+                            ),
+                            Text(
+                              '${remittance.roleInfo}',
+                              style: TextStyle(
+                                color: colorScheme.onSurface.withOpacity(0.8),
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
                         ),
 
                         const SizedBox(height: 4),
@@ -577,7 +587,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Text(
-                        '→ $totalAmountSent',
+                        '$totalAmountSent',
                         style: TextStyle(
                           color: colorScheme.onSurface,
                           fontSize: 14,
@@ -601,32 +611,27 @@ class _HomeScreenState extends State<HomeScreen> {
               SizedBox(height: 2*AppDimensions.smallPadding),
 
               // Ligne inferieur avec statut et montant
+              // pour le status
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  // Montant principal
-                  Text(''),
-
-                  // Badge de statut
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
-                      color: statusColor.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: statusColor.withOpacity(0.3), width: 1),
+                      color: _getStatusColor(remittance.status).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
                       remittance.status.toUpperCase(),
                       style: TextStyle(
-                        color: statusColor,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 0.5,
+                        color: _getStatusColor(remittance.status),
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
                   ),
                 ],
-              ),
+              )
             ],
           ),
         ),
