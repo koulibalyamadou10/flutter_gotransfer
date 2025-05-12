@@ -1,7 +1,7 @@
 import 'dart:convert';
-import 'package:gotransfer/config/api_config.dart';
 import 'package:http/http.dart' as http;
 
+import '../../core/config/api_config.dart';
 import '../models/sender_model.dart';
 
 class SenderRepository {

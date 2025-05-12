@@ -2,12 +2,11 @@ import 'dart:io';
 
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:gotransfer/config/app_config.dart';
+import 'package:gotransfer/core/config/app_config.dart';
 import 'package:gotransfer/routes/app_routes.dart';
 import 'package:flutter/material.dart';
 import 'package:intl_phone_field/intl_phone_field.dart';
 import '../../../data/models/user_model.dart';
-import '../../../data/preferences/user_preferences.dart';
 import '../../../data/repositories/user_repository.dart';
 import '../../widgets/components/custom_scaffold.dart';
 
@@ -32,9 +31,12 @@ class _RegisterPageState extends State<RegisterPage> {
 
   // Contrôleurs pour les champs du formulaire
   final TextEditingController _firstNameController = TextEditingController();
+  final TextEditingController _sponsorEmailController = TextEditingController();
   final TextEditingController _lastNameController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _countryController = TextEditingController();
+  final TextEditingController _countryCodeController = TextEditingController();
+  final TextEditingController _countryCurrencyController = TextEditingController();
   final TextEditingController _addressController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
@@ -48,12 +50,13 @@ class _RegisterPageState extends State<RegisterPage> {
   void initState() {
     super.initState();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersive);
-    _firstNameController.text = 'amadou';
-    _lastNameController.text = 'koulibaly';
-    _emailController.text = 'koulibalyamadou11@gmail.com';
-    _passwordController.text = '123456789';
-    _addressController.text = 'kiroty';
-    _phoneController.text = '+224621820065';
+    _firstNameController.text = '';
+    _lastNameController.text = '';
+    _emailController.text = '';
+    _passwordController.text = '';
+    _addressController.text = '';
+    _phoneController.text = '';
+    _sponsorEmailController.text = '';
   }
 
   @override
@@ -65,6 +68,7 @@ class _RegisterPageState extends State<RegisterPage> {
     _addressController.dispose();
     _passwordController.dispose();
     _controller.dispose();
+    _sponsorEmailController.dispose();
     super.dispose();
   }
 
@@ -87,7 +91,7 @@ class _RegisterPageState extends State<RegisterPage> {
     }
 
     setState(() => _isLoading = true);
-
+    print('submi ${_phoneController.text}');
     try {
       final user = await UserRepository.register(
         User(
@@ -95,6 +99,9 @@ class _RegisterPageState extends State<RegisterPage> {
           lastName: _lastNameController.text,
           phoneNumber: _phoneController.text,
           country: _countryController.text,
+          sponsorEmail:  _sponsorEmailController.text.isEmpty ? null : _sponsorEmailController.text,
+          countryCode: _countryCodeController.text,
+          currency: _countryCurrencyController.text,
           email: _emailController.text,
           password: _passwordController.text,
           address: _addressController.text,
@@ -155,8 +162,6 @@ class _RegisterPageState extends State<RegisterPage> {
 
   void _verifyCode() {
     setState(() => _isLoading = true);
-    // Votre logique de vérification ici
-
     Future.delayed(2800.ms, () {
       setState(() {
         _isLoading = false;
@@ -167,16 +172,14 @@ class _RegisterPageState extends State<RegisterPage> {
     });
   }
 
-// Modifiez votre méthode _resendCode()
   void _resendCode() {
     setState(() {
       _canResend = false;
       code = List.filled(6, '');
       _countToResendCode++;
       _timeToResendCode = _countToResendCode*2;
-      _animationKey = UniqueKey(); // Change la clé pour forcer la reconstruction
+      _animationKey = UniqueKey();
     });
-    // Votre logique pour renvoyer le code ici
   }
 
   @override
@@ -195,7 +198,7 @@ class _RegisterPageState extends State<RegisterPage> {
         },
         children: [
           _buildRegisterPage(),
-          _buildConfirmationPage(colorScheme)
+          //_buildConfirmationPage(colorScheme)
         ],
       ),
     );
@@ -260,14 +263,13 @@ class _RegisterPageState extends State<RegisterPage> {
               // Logo personnalisé avec la palette de couleurs
               Center(
                 child: Container(
-                  width: 100,
                   height: 100,
                   decoration: BoxDecoration(
                     color: colorScheme.primary.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Center(
-                    child: Image.asset('assets/logo/original-logo-symbol.png', width: 100, height: 100, fit: BoxFit.cover),
+                    child: Image.asset('assets/images/wbg/gotransfer.png', width: 100, height: 100, fit: BoxFit.cover),
                   ),
                 ),
               ),
@@ -335,11 +337,11 @@ class _RegisterPageState extends State<RegisterPage> {
                 dropdownIcon: Icon(Icons.arrow_drop_down),
                 initialCountryCode: 'GN',
                 onChanged: (phone) {
-                  // Gérer le changement de numéro
-                  print("phone number is : ${phone.completeNumber}");
                   setState(() {
-                    _phoneController.text = phone.completeNumber;
-                    _countryController.text = AppConfig.codeToCountry[phone.countryCode] ?? '';
+                    _phoneController.text = phone.completeNumber.replaceAll("+", "");
+                    _countryController.text = AppConfig.countryCodeToCountryName[phone.countryISOCode] ?? '';
+                    _countryCodeController.text = phone.countryCode.replaceAll("+", "");
+                    _countryCurrencyController.text = AppConfig.countryCurrencyMap[phone.countryISOCode] ?? '';
                   });
                 },
                 keyboardType: TextInputType.phone,
@@ -380,6 +382,18 @@ class _RegisterPageState extends State<RegisterPage> {
                     : null,
                 keyboardType: TextInputType.emailAddress,
                 decoration: _buildInputDecoration('Email', Icons.email),
+              ),
+              const SizedBox(height: 20),
+              TextFormField(
+                controller: _sponsorEmailController,
+                validator: (value) {
+                  if (value!.isNotEmpty && !value.contains('@')) {
+                    return 'Email invalide';
+                  }
+                  return null;
+                },
+                keyboardType: TextInputType.emailAddress,
+                decoration: _buildInputDecoration('Email du parrain (optionnel)', Icons.email),
               ),
               const SizedBox(height: 20),
               TextFormField(
@@ -540,247 +554,6 @@ class _RegisterPageState extends State<RegisterPage> {
                 ),
               ),
               const SizedBox(height: 50),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildConfirmationPage(ColorScheme colorScheme) {
-    return SingleChildScrollView(
-      child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0),
-          child: Column(
-            children: [
-              const SizedBox(height: 30),
-              // En-tête avec animation
-              AnimatedOpacity(
-                opacity: 1.0,
-                duration: const Duration(milliseconds: 500),
-                child: Text(
-                  'Vérification du numéro',
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w700,
-                    color: colorScheme.primary,
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 40),
-      
-              // Animation du téléphone avec code
-              Container(
-                width: 120,
-                height: 120,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.grey.withOpacity(0.2),
-                      blurRadius: 10,
-                      spreadRadius: 3,
-                    ),
-                  ],
-                ),
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    // Icône de téléphone
-                    Icon(
-                      Icons.phone_iphone,
-                      size: 60,
-                      color: colorScheme.primary,
-                    ),
-                    // Bulle de message
-                    Positioned(
-                      top: 20,
-                      right: 10,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          border: Border.all(
-                            color: colorScheme.primary,
-                            width: 1.5,
-                          ),
-                          borderRadius: BorderRadius.circular(12),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.grey.withOpacity(0.1),
-                              blurRadius: 5,
-                            ),
-                          ],
-                        ),
-                        child: Text(
-                          '••••••',
-                          style: TextStyle(
-                            color: Theme.of(context).primaryColor,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 40),
-      
-              // Texte d'instruction avec numéro formaté
-              RichText(
-                textAlign: TextAlign.center,
-                text: TextSpan(
-                  style: const TextStyle(
-                    fontSize: 16,
-                    color: Colors.black54,
-                    height: 1.5,
-                  ),
-                  children: [
-                    TextSpan(text: 'Entrez le code à 6 chiffres envoyé au\n'),
-                    TextSpan(
-                      text: _phoneController.text, // Utilise le numéro saisi
-                      style: TextStyle(
-                        color: colorScheme.primary,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 30),
-      
-              // Champs de code avec saisie
-              Form(
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: List.generate(
-                    6, (index) => SizedBox(
-                      width: 45,
-                      height: 60,
-                      child: TextFormField(
-                        controller: TextEditingController(text: code[index]),
-                        keyboardType: TextInputType.number,
-                        maxLength: 1,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: Theme.of(context).primaryColor,
-                        ),
-                        decoration: InputDecoration(
-                          counterText: '',
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                            borderSide: BorderSide(
-                              color: code[index].isEmpty
-                                  ? Colors.grey.shade300
-                                  : Theme.of(context).primaryColor,
-                              width: 1.5,
-                            ),
-                          ),
-                          filled: true,
-                          fillColor: code[index].isEmpty
-                              ? Colors.grey.shade50
-                              : Colors.white,
-                        ),
-                        onChanged: (value) {
-                          if (value.length == 1) {
-                            setState(() {
-                              code[index] = value;
-                            });
-                            // Passe automatiquement au champ suivant
-                            if (index < 5) {
-                              FocusScope.of(context).nextFocus();
-                            }
-                          } else if (value.isEmpty && index > 0) {
-                            // Retourne au champ précédent si on efface
-                            FocusScope.of(context).previousFocus();
-                          }
-                        },
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 40),
-      
-              // Bouton avec état de chargement
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: colorScheme.primary,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(25),
-                    ),
-                    elevation: 0,
-                  ),
-                  onPressed: _isLoading ? null : _verifyCode,
-                  child: _isLoading
-                      ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Colors.white,
-                    ),
-                  )
-                      : const Text(
-                    'VÉRIFIER',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 20),
-
-              // Modifiez votre TweenAnimationBuilder
-              TweenAnimationBuilder<Duration>(
-                key: _animationKey, // Ajoutez cette ligne
-                tween: Tween(
-                  begin: Duration(minutes: _timeToResendCode),
-                  end: Duration.zero,
-                ),
-                duration: Duration(minutes: _timeToResendCode),
-                builder: (_, Duration value, __) {
-                  final minutes = value.inMinutes;
-                  final seconds = value.inSeconds % 60;
-                  return Text(
-                    'Renvoyer le code dans ${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}',
-                    style: TextStyle(
-                      color: minutes == 0 && seconds == 0
-                          ? Theme.of(context).primaryColor
-                          : Colors.grey,
-                    ),
-                  );
-                },
-                onEnd: () {
-                  setState(() {
-                    _canResend = true;
-                  });
-                },
-              ),
-
-              // Bouton pour renvoyer le code (visible après le compte à rebours)
-              if (_canResend)
-                TextButton(
-                  onPressed: _resendCode,
-                  child: Text(
-                    'Renvoyer le code',
-                    style: TextStyle(
-                      color: colorScheme.primary,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
             ],
           ),
         ),

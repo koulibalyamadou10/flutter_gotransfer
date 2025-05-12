@@ -13,6 +13,8 @@ class User {
   final String phoneNumber;
   final String address;
   final String? country;
+  final String? sponsorEmail;
+  final String? countryCode;
   final String? image;
   final String password;
   final double? balance;
@@ -31,7 +33,9 @@ class User {
     required this.email,
     required this.phoneNumber,
     required this.address,
+    this.sponsorEmail,
     this.country,
+    this.countryCode,
     this.image,
     this.balance,
     this.currency,
@@ -83,11 +87,15 @@ class User {
       'id': id,
       'first_name': firstName,
       'last_name': lastName,
+      'name': '$firstName $lastName',
       'email': email,
       'phone_number': phoneNumber,
+      'sponsor_email': sponsorEmail,
       'address': address,
+      'role': 'customer',
       'image': image,
       'country': country?? '',
+      'country_code': countryCode ?? '',
       'password': password,
       'currency': currency,
       'balance': balance,

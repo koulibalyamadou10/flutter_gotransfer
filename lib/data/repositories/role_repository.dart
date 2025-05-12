@@ -3,12 +3,12 @@ import 'dart:convert';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
-import 'package:gotransfer/config/api_config.dart';
 import 'package:gotransfer/core/utils/helpers.dart';
 import 'package:gotransfer/data/repositories/user_repository.dart';
 import 'package:gotransfer/widgets/components/custom_toast.dart';
 import 'package:http/http.dart' as http;
 
+import '../../core/config/api_config.dart';
 import '../../routes/app_routes.dart';
 import '../../widgets/components/custom_scaffold.dart';
 import '../models/role_model.dart';
@@ -138,6 +138,7 @@ class RoleRepository {
       String srcCountry,
       String dstCountry,
       double amount,
+      String direction,
       BuildContext context,
       FToast fToast) async {
     final accessToken = (await ReferenceRepository.getReferenceInSharedReference()).accessToken;
@@ -154,7 +155,8 @@ class RoleRepository {
             'dst_currency': dstCurrency,
             'src_country': srcCountry,
             'dst_country': dstCountry,
-            'amount': amount
+            'amount': amount,
+            'direction': direction
           })
       );
 

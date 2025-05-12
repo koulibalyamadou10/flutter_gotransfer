@@ -58,6 +58,7 @@ class Role {
       'last_name': lastName,
       'country': country,
       'country_code': countryCode,
+      'country_currency': countryCurrency,
       'telephone': telephone,
       'email': email ?? '',
       'active': active ? 1 : 0,

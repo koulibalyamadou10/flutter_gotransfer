@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:http/http.dart';
 
-import '../../config/app_config.dart';
+import '../config/app_config.dart';
 
 class Helpers {
   static bool isValidEmail(String email) {

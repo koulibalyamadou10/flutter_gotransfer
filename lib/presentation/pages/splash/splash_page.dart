@@ -134,10 +134,11 @@ class _SplashPageState extends State<SplashPage> with SingleTickerProviderStateM
                                 FadeEffect(duration: 500.ms),
                               ],
                               child: Container(
-                                width: 80,
-                                height: 80,
+                                width: 150,
+                                height: 150,
                                 child: Image.asset(
                                   'assets/logo/original-logo-symbol.png',
+                                  //'assets/images/wbg/gotransfer.png',
                                   filterQuality: FilterQuality.high,
                                 ),
                               ),

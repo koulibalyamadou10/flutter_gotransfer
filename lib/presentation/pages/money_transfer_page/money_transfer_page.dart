@@ -4,14 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_native_contact_picker/flutter_native_contact_picker.dart';
 import 'package:flutter_native_contact_picker/model/contact.dart';
-import 'package:flutter_vector_icons/flutter_vector_icons.dart';
 import 'package:fluttertoast/fluttertoast.dart';
-import 'package:gotransfer/config/api_config.dart';
-import 'package:gotransfer/config/app_config.dart' as App;
+import 'package:gotransfer/core/config/app_config.dart' as App;
 import 'package:gotransfer/constants/dimensions.dart';
-import 'package:gotransfer/core/utils/helpers.dart';
 import 'package:gotransfer/data/models/remittance_model.dart';
-import 'package:gotransfer/data/models/user_model.dart';
 import 'package:gotransfer/data/repositories/role_repository.dart';
 import 'package:gotransfer/data/repositories/remittance_repository.dart';
 import 'package:gotransfer/data/repositories/user_repository.dart';
@@ -120,14 +116,14 @@ class _MoneyTransferPageState extends State<MoneyTransferPage> {
 
   Future<void> _handleAmountSendChange() async {
     if (_amountSendController.text.isNotEmpty) {
-      await _getTargetCurrency(_amountSendController.text);
+      await _getTargetCurrency(_amountSendController.text, 'send');
       // Autres traitements nécessaires...
     }
   }
 
   Future<void> _handleAmountReceiveChange() async {
     if (_amountReceiveController.text.isNotEmpty) {
-      await _getTargetCurrency(_amountReceiveController.text);
+      await _getTargetCurrency(_amountReceiveController.text, 'receive');
       // Autres traitements nécessaires...
     }
   }
@@ -172,6 +168,8 @@ class _MoneyTransferPageState extends State<MoneyTransferPage> {
           destinataires.addAll(loadedDestinataires);
           contactToRole.addAll(loadedcontactToRole);
           _isLoadingDestinataires = false;
+        });
+        setState(() {
           _selectedContact = destinataires.last;
         });
       }
@@ -192,7 +190,7 @@ class _MoneyTransferPageState extends State<MoneyTransferPage> {
   String _targetCurrency = '';
   bool _targetCurrencyLoader = false;
 
-  Future<void> _getTargetCurrency(String amountStr) async {
+  Future<void> _getTargetCurrency(String amountStr, String direction) async {
     double amount = amountStr.split(" ").length > 1 ? double.tryParse(amountStr.split(" ")[0]) ?? 0 : double.tryParse(amountStr) ?? 0;
     if (_selectedContact.isNotEmpty) {
       setState(() {
@@ -211,6 +209,7 @@ class _MoneyTransferPageState extends State<MoneyTransferPage> {
         userCountry,
         role.country,
         amount,
+        direction,
         context,
         fToast
       );
@@ -341,9 +340,9 @@ class _MoneyTransferPageState extends State<MoneyTransferPage> {
             role = contactToRole[_selectedContact];
           });
           if( _amountSendController.text.isNotEmpty && _amountSendController.text != '0' ){
-            _getTargetCurrency(_amountSendController.text);
+            _getTargetCurrency(_amountSendController.text, 'send');
           }else if( _amountReceiveController.text.isNotEmpty && _amountReceiveController.text != '0' ){
-            _getTargetCurrency(_amountReceiveController.text);
+            _getTargetCurrency(_amountReceiveController.text, 'receive');
           }
         },
       ),
@@ -365,7 +364,6 @@ class _MoneyTransferPageState extends State<MoneyTransferPage> {
       setState(() => _isAddingBeneficiaire = true);
       setState(() => containerButtonKey = UniqueKey());
       await UserRepository.getUserInSharedPreferences();
-
       bool rs = await RoleRepository.create(
           Role(
             id: 0,
@@ -394,7 +392,6 @@ class _MoneyTransferPageState extends State<MoneyTransferPage> {
           _phoneController.text = '';
           _phoneNumberKey = UniqueKey();
         });
-        //Navigator.of(context).pop();
       };
       setState(() => _isAddingBeneficiaire = false);
     }
@@ -527,10 +524,10 @@ class _MoneyTransferPageState extends State<MoneyTransferPage> {
                               onChanged: (phone) {
                                 String _code = phone.countryCode;
                                 setState(() {
-                                  _phoneController.text = phone.completeNumber.trim().replaceAll("+", "");
-                                  _countryController.text = App.AppConfig.codeToCountry[_code]!;
+                                  _phoneController.text = phone.completeNumber.replaceAll("+", "");
+                                  _countryController.text = App.AppConfig.countryCodeToCountryName[phone.countryISOCode] ?? '';
                                   _countryCodeController.text = phone.countryCode.replaceAll("+", "");
-                                  _countryCurrencyController.text = App.AppConfig.codeToCurrency[_code]!;
+                                  _countryCurrencyController.text = App.AppConfig.countryCurrencyMap[phone.countryISOCode] ?? '';
                                 });
                               },
                             ),

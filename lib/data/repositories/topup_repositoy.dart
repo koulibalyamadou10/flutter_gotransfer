@@ -1,18 +1,19 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:gotransfer/data/models/topup_model.dart';
 import 'package:gotransfer/data/repositories/reference_repository.dart';
 import 'package:gotransfer/data/repositories/user_repository.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-import '../../config/api_config.dart';
+import '../../core/config/api_config.dart';
 import '../../routes/app_routes.dart';
 import '../../widgets/components/custom_scaffold.dart';
 import '../models/user_model.dart';
 
 class TopupRepository {
   // Créer une nouvelle recharge
-  static Future<bool> create(Topup topup, BuildContext context) async {
+  static Future<bool> create(int productId, double amount, String phoneNumber, BuildContext context, FToast fToast) async {
     final accessToken = (await ReferenceRepository.getReferenceInSharedReference()).accessToken;
     try {
       var response = await http.post(
@@ -21,37 +22,48 @@ class TopupRepository {
           "Content-Type": "application/json",
           "Authorization": "Bearer $accessToken"
         },
-        body: jsonEncode(topup.toJson()),
+        body: jsonEncode({
+          'product_id': productId,
+          'price': amount,
+          'phone_number': phoneNumber
+        }),
       );
 
       if (response.statusCode == 201) {
         Map<String, dynamic> success = jsonDecode(response.body);
         print('Recharge créée avec succès: $success');
-
+        fToast.showToast(
+          child: CustomSnackBar(
+            content: Text(
+              'Recharge créée avec succès'
+            ),
+            backgroundColor: Colors.green,
+          )
+        );
         // Mise à jour de l'utilisateur si nécessaire
         User user = await UserRepository.getUserInSharedPreferences();
         return true;
       } else if( response.statusCode == 400) {
         Map<String, dynamic> errors = jsonDecode(response.body);
         print('Erreur 400: $errors');
-        ScaffoldMessenger.of(context).showSnackBar(
-          CustomSnackBar(
+        fToast.showToast(
+          child: CustomSnackBar(
             content: Text(
-              errors.containsKey('detail') ? errors['detail'] : 'Une erreur est survenue lors de la création de la recharge.'
+              errors.containsKey('detail')? errors['detail'] : 'Une erreur est survenue lors de la création de la recharge.'
             ),
             backgroundColor: Colors.red,
-          ),
+          )
         );
         print('Erreur lors de la création de la recharge: ${response.body}');
       } else if( response.statusCode == 401) {
         Map<String, dynamic> errors = jsonDecode(response.body);
-        ScaffoldMessenger.of(context).showSnackBar(
-          CustomSnackBar(
+        fToast.showToast(
+          child: CustomSnackBar(
             content: Text(
-                'Votre session a expiré. Veuillez vous reconnecter.'
+              'Votre session a expiré. Veuillez vous reconnecter.'
             ),
             backgroundColor: Colors.red,
-          ),
+          )
         );
         Navigator.popAndPushNamed(context, AppRoutes.login );
       }

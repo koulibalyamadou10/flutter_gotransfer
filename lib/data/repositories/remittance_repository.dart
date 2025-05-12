@@ -4,7 +4,7 @@ import 'package:gotransfer/data/models/remittance_model.dart'; // Ton modèle Re
 import 'package:gotransfer/data/repositories/reference_repository.dart';
 import 'package:gotransfer/data/repositories/user_repository.dart';
 import 'package:http/http.dart' as http;
-import '../../config/api_config.dart';
+import '../../core/config/api_config.dart';
 import '../../routes/app_routes.dart';
 import '../../widgets/components/custom_scaffold.dart';
 import '../models/user_model.dart';

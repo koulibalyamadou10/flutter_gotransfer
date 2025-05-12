@@ -118,14 +118,13 @@ class _LoginPageState extends State<LoginPage> {
                   Column(
                     children: [
                       Container(
-                        width: 100,
                         height: 100,
                         decoration: BoxDecoration(
                           color: colorScheme.primary.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Center(
-                          child: Image.asset('assets/logo/original-logo-symbol.png', width: 100, height: 100, fit: BoxFit.cover),
+                          child: Image.asset('assets/images/wbg/gotransfer.png', width: 100, height: 100, fit: BoxFit.cover),
                         ),
                       ),
                       const SizedBox(height: 24),

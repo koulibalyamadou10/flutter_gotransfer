@@ -10,7 +10,7 @@ import 'package:gotransfer/data/repositories/reference_repository.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../../config/api_config.dart';
+import '../../core/config/api_config.dart';
 import '../../routes/app_routes.dart';
 import '../../widgets/components/custom_scaffold.dart';
 import '../../widgets/components/custom_toast.dart';
@@ -30,21 +30,18 @@ class UserRepository {
   static Future<void> register(User user, File? image, BuildContext context, {bool isSavedSession = true}) async {
     try {
       // Prepare the request
-      var request = http.MultipartRequest('POST', Uri.parse(ApiConfig.registerEndpoint))
-        ..fields['first_name'] = user.firstName
-        ..fields['last_name'] = user.lastName
-        ..fields['country'] = user.country ?? ''
-        ..fields['email'] = user.email
-        ..fields['phone_number'] = user.phoneNumber
-        ..fields['address'] = user.address
-        ..fields['commission'] = '${user.commission}'
-        ..fields['password'] = user.password;
-
-      final response = await request.send();
+      var response = await http.post(
+        Uri.parse(ApiConfig.registerEndpoint),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({
+          'user': user.toJson(),
+          'sender': {}
+        }),
+      );
 
       // Check the response status
       if (response.statusCode == 201) {
-        Map<String, dynamic> succss = jsonDecode(await response.stream.bytesToString());
+        Map<String, dynamic> succss = jsonDecode(response.body);
           await UserRepository.setUserEmail(user.email) && await UserRepository.setUserPasswordHashed(user.password);
         ScaffoldMessenger.of(context).showSnackBar(
           CustomSnackBar(
@@ -61,7 +58,7 @@ class UserRepository {
           }
         );
       } else {
-        Map<String, dynamic> errors = jsonDecode(await response.stream.bytesToString());
+        Map<String, dynamic> errors = jsonDecode(response.body);
         print(errors);
         ScaffoldMessenger.of(context).showSnackBar(
           CustomSnackBar(
@@ -72,6 +69,8 @@ class UserRepository {
                       errors['email'][0]:
                       errors.containsKey('country')?
                           errors['country'][0] :
+                      errors.containsKey('detail') ?
+                          errors['detail'] :
                       'Erreur Interne'
             ),
             backgroundColor: Colors.red,
@@ -106,7 +105,7 @@ class UserRepository {
             gravity: ToastGravity.TOP
         );
         Map<String, dynamic> success = jsonDecode(response.body);
-        print(success['user']['roles']);
+        print(success['user']);
         bool result = await ReferenceRepository.setReferenceInSharedReference(
             Reference(
                 id: 1,
